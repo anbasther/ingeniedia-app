@@ -1,24 +1,8 @@
 {
   "version": 1,
   "mes": "2026-08",
-  "generado": "2026-08-29T00:00:00Z",
+  "generado": "2026-08-31T00:00:00Z",
   "articulos": {
-    "2026-08-24": {
-      "shortCategory": "Electricidad",
-      "title": "Protecciones eléctricas y selectividad",
-      "description": "Una revisión breve sobre cómo la coordinación entre protecciones permite mejorar la seguridad y continuidad operacional en instalaciones eléctricas.",
-      "context": "En una instalación eléctrica, las protecciones no solo deben interrumpir una falla, sino hacerlo de manera ordenada. La selectividad busca que opere primero la protección más cercana al punto de falla, evitando desconexiones innecesarias en otros sectores del sistema.",
-      "detail": "La coordinación entre interruptores, fusibles y diferenciales exige revisar corriente nominal, poder de corte, curvas de disparo, sensibilidad y tiempos de operación. Una mala selección puede generar disparos intempestivos o dejar zonas sin protección efectiva.",
-      "ai": "La IA puede apoyar el análisis de registros de disparo, detectar patrones de fallas repetitivas y sugerir ajustes en estrategias de mantenimiento, siempre bajo validación técnica profesional.",
-      "history": "La evolución de las protecciones eléctricas pasó desde dispositivos simples de interrupción hasta sistemas coordinados capaces de medir, comunicar y actuar con criterios cada vez más precisos.",
-      "keyConcepts": "La selectividad permite que una falla sea despejada por la protección más cercana, reduciendo desconexiones innecesarias y mejorando la continuidad operacional.",
-      "sources": [
-        "IEC 60898-1 · Interruptores automáticos.",
-        "IEC 60947-2 · Aparatos de baja tensión.",
-        "SEC Chile · Pliegos técnicos RIC."
-      ],
-      "readingMin": 2
-    },
     "2026-08-29": {
       "shortCategory": "Energía",
       "title": "Armónicos eléctricos y calidad de energía",
@@ -48,6 +32,22 @@
         "ISO 13374 · Monitoreo de condición.",
         "ISO 17359 · Diagnóstico de máquinas.",
         "NIST · IA aplicada a sistemas industriales."
+      ],
+      "readingMin": 2
+    },
+    "2026-08-31": {
+      "shortCategory": "Electricidad",
+      "title": "Protecciones eléctricas y selectividad",
+      "description": "Una revisión breve sobre cómo la coordinación entre protecciones permite mejorar la seguridad y continuidad operacional en instalaciones eléctricas.",
+      "context": "En una instalación eléctrica, las protecciones no solo deben interrumpir una falla, sino hacerlo de manera ordenada. La selectividad busca que opere primero la protección más cercana al punto de falla, evitando desconexiones innecesarias en otros sectores del sistema.",
+      "detail": "La coordinación entre interruptores, fusibles y diferenciales exige revisar corriente nominal, poder de corte, curvas de disparo, sensibilidad y tiempos de operación. Una mala selección puede generar disparos intempestivos o dejar zonas sin protección efectiva.",
+      "ai": "La IA puede apoyar el análisis de registros de disparo, detectar patrones de fallas repetitivas y sugerir ajustes en estrategias de mantenimiento, siempre bajo validación técnica profesional.",
+      "history": "La evolución de las protecciones eléctricas pasó desde dispositivos simples de interrupción hasta sistemas coordinados capaces de medir, comunicar y actuar con criterios cada vez más precisos.",
+      "keyConcepts": "La selectividad permite que una falla sea despejada por la protección más cercana, reduciendo desconexiones innecesarias y mejorando la continuidad operacional.",
+      "sources": [
+        "IEC 60898-1 · Interruptores automáticos.",
+        "IEC 60947-2 · Aparatos de baja tensión.",
+        "SEC Chile · Pliegos técnicos RIC."
       ],
       "readingMin": 2
     }
