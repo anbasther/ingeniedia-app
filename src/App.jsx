@@ -7,27 +7,34 @@ import { useState, useRef, useCallback, useEffect, useMemo } from "react";
   if (typeof document === "undefined" || document.getElementById("id-font")) return;
   const l = document.createElement("link");
   l.id = "id-font"; l.rel = "stylesheet";
-  l.href = "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap";
+  l.href = "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap";
   document.head.appendChild(l);
 })();
 
 // ═══════════════════════════════════════════════════
 // STORAGE
 // ═══════════════════════════════════════════════════
+const CLAVE_ESTADO = "ingeniedia-estado";
+
+// El progreso vive en el teléfono del estudiante. Nada sale del dispositivo.
 async function storePersist(s) {
-  try { await window.storage.set("app-state", JSON.stringify(s)); } catch {}
+  try { window.localStorage.setItem(CLAVE_ESTADO, JSON.stringify(s)); } catch {}
 }
 async function storeHydrate(defaults) {
   try {
-    const r = await window.storage.get("app-state");
-    return r ? { ...defaults, ...JSON.parse(r.value) } : defaults;
+    const crudo = window.localStorage.getItem(CLAVE_ESTADO);
+    return crudo ? { ...defaults, ...JSON.parse(crudo) } : defaults;
   } catch { return defaults; }
 }
 
 // ═══════════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════════
-const TODAY_KEY   = "2026-05-19";
+// Fecha real del dispositivo. Se recalcula al montar la app.
+const hoyKey = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+};
 const APP_VERSION = "0.2.0";
 const FONT        = "'IBM Plex Sans', system-ui, sans-serif";
 const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
@@ -43,9 +50,30 @@ const getMonthYear = (key) => { const [y,m] = key.split("-").map(Number); return
 // ═══════════════════════════════════════════════════
 // DATA
 // ═══════════════════════════════════════════════════
-const ARTICLES = {
+// ═══════════════════════════════════════════════════
+// CATEGORÍAS  ·  una por día de la semana
+// Fuente única de color e ilustración. El contenido nunca los declara.
+// ═══════════════════════════════════════════════════
+const CATEGORIAS = {
+  "Electricidad":   { color:"#facc15", dia:1 },  // lunes
+  "Mecánica":       { color:"#fb923c", dia:2 },  // martes
+  "Automatización": { color:"#4ade80", dia:3 },  // miércoles
+  "Electrónica":    { color:"#a3e635", dia:4 },  // jueves
+  "Informática":    { color:"#38bdf8", dia:5 },  // viernes
+  "Energía":        { color:"#34d399", dia:6 },  // sábado
+  "IA":             { color:"#a78bfa", dia:0 },  // domingo
+};
+const ORDEN_CATEGORIAS = Object.keys(CATEGORIAS);
+const colorDe     = (cat) => CATEGORIAS[cat]?.color ?? "#94a3b8";
+const categoriaDe = (fechaKey) => {
+  const [y,m,d] = fechaKey.split("-").map(Number);
+  const dia = new Date(y, m-1, d).getDay();
+  return ORDEN_CATEGORIAS.find(c => CATEGORIAS[c].dia === dia) ?? null;
+};
+
+const CONTENIDO_DEMO = {
   "2026-05-19": {
-    shortCategory:"Electricidad", title:"Protecciones eléctricas y selectividad", color:"#facc15",
+    shortCategory:"Electricidad", title:"Protecciones eléctricas y selectividad",
     description:"Una revisión breve sobre cómo la coordinación entre protecciones permite mejorar la seguridad y continuidad operacional en instalaciones eléctricas.",
     context:"En una instalación eléctrica, las protecciones no solo deben interrumpir una falla, sino hacerlo de manera ordenada. La selectividad busca que opere primero la protección más cercana al punto de falla, evitando desconexiones innecesarias en otros sectores del sistema.",
     detail:"La coordinación entre interruptores, fusibles y diferenciales exige revisar corriente nominal, poder de corte, curvas de disparo, sensibilidad y tiempos de operación. Una mala selección puede generar disparos intempestivos o dejar zonas sin protección efectiva.",
@@ -56,7 +84,7 @@ const ARTICLES = {
     readingMin:2,
   },
   "2026-05-18": {
-    shortCategory:"Energía", title:"Armónicos eléctricos y calidad de energía", color:"#34d399",
+    shortCategory:"Energía", title:"Armónicos eléctricos y calidad de energía",
     description:"Una mirada breve sobre distorsión armónica, cargas no lineales y sus efectos físicos en sistemas eléctricos modernos.",
     context:"Los armónicos aparecen cuando las cargas consumen corriente de forma no sinusoidal. Aunque su frecuencia sea distinta a la fundamental, siguen siendo corrientes que circulan por conductores, transformadores y protecciones.",
     detail:"Su presencia puede aumentar pérdidas, calentar equipos, afectar mediciones y deteriorar la calidad de energía. Por eso se analizan parámetros como THD, espectro armónico y compatibilidad entre cargas y red.",
@@ -67,7 +95,7 @@ const ARTICLES = {
     readingMin:2,
   },
   "2026-05-17": {
-    shortCategory:"IA", title:"Mantenimiento predictivo con IA", color:"#a78bfa",
+    shortCategory:"IA", title:"Mantenimiento predictivo con IA",
     description:"Cómo los datos operacionales pueden anticipar fallas y mejorar decisiones técnicas de mantenimiento.",
     context:"El mantenimiento predictivo busca anticipar fallas antes de que ocurran, utilizando datos históricos, mediciones en línea y señales de condición provenientes de equipos críticos.",
     detail:"Variables como vibración, temperatura, corriente, presión o ciclos de operación pueden revelar degradación progresiva. El desafío técnico está en distinguir ruido, operación normal y señales tempranas de falla.",
@@ -79,19 +107,59 @@ const ARTICLES = {
   },
 };
 
-const CATEGORIES = [
-  {key:"Electricidad"},{key:"Energía"},{key:"IA"},
-  {key:"Informática"},{key:"Mecánica"},{key:"Automatización"},
-];
+const CATEGORIES = ORDEN_CATEGORIAS.map(key => ({ key }));
 
 // ═══════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════
+// CARGA DE CONTENIDO
+// Un archivo JSON por mes en /public/contenido/AAAA-MM.json
+// El código nunca contiene artículos: solo sabe cómo pedirlos.
+// ═══════════════════════════════════════════════════
+const ESQUEMA_VERSION = 1;
+const CAMPOS = ["shortCategory","title","description","context",
+                "detail","ai","history","keyConcepts","sources","readingMin"];
+
+function validarArticulo(fecha, art) {
+  const faltan = CAMPOS.filter(c => art[c] === undefined || art[c] === "" ||
+                                    (Array.isArray(art[c]) && !art[c].length));
+  if (faltan.length)                      return `${fecha}: faltan campos (${faltan.join(", ")})`;
+  if (!CATEGORIAS[art.shortCategory])     return `${fecha}: categoría desconocida "${art.shortCategory}"`;
+  if (!Array.isArray(art.sources))        return `${fecha}: "sources" debe ser una lista`;
+  return null;
+}
+
+// Acepta el archivo del mes y devuelve solo los artículos válidos.
+function normalizarMes(json) {
+  const articulos = json?.articulos ?? json ?? {};
+  const ok = {}, errores = [];
+  for (const [fecha, art] of Object.entries(articulos)) {
+    const e = validarArticulo(fecha, art);
+    if (e) errores.push(e); else ok[fecha] = art;
+  }
+  return { articulos: ok, errores };
+}
+
+const mesDe = (fechaKey) => fechaKey.slice(0, 7);
+
+async function cargarMes(mes) {
+  try {
+    const r = await fetch(`/contenido/${mes}.json`, { cache:"no-cache" });
+    if (!r.ok) throw new Error(r.status);
+    return normalizarMes(await r.json());
+  } catch {
+    // Sin servidor de contenido (vista previa): se usa la muestra incluida.
+    return normalizarMes({ articulos: CONTENIDO_DEMO });
+  }
+}
+
 const DEFAULT_STATE = {
-  tab:"today", selectedKey:TODAY_KEY, theme:"dark", fontScale:1,
-  liked:[], disliked:[], saved:[TODAY_KEY], read:[],
+  tab:"today", selectedKey:hoyKey(), theme:"dark", fontScale:1,
+  liked:[], disliked:[], saved:[], read:[],
   notificationsOn:true, notifTime:"08:00",
-  userName:"Ángel Bastías", userEmail:"angel.bastias.herrera@gmail.com",
+  userName:"", userEmail:"",
   onboardingDone:false, streakCount:0, lastReadDate:"",
 };
 
@@ -104,12 +172,13 @@ const applyReaction = (state,key,dir) => {
 };
 
 function computeStreak(state) {
-  if (state.lastReadDate === TODAY_KEY) return state;
-  const [y,m,d] = TODAY_KEY.split("-").map(Number);
+  const hoy = hoyKey();
+  if (state.lastReadDate === hoy) return state;
+  const [y,m,d] = hoy.split("-").map(Number);
   const dt = new Date(y,m-1,d); dt.setDate(dt.getDate()-1);
   const yesterday = toKey(dt.getFullYear(), dt.getMonth(), dt.getDate());
   const streak = state.lastReadDate === yesterday ? state.streakCount + 1 : 1;
-  return { ...state, streakCount:streak, lastReadDate:TODAY_KEY };
+  return { ...state, streakCount:streak, lastReadDate:hoy };
 }
 
 // ═══════════════════════════════════════════════════
@@ -226,10 +295,114 @@ function HeroIA({ color }) {
   );
 }
 
+function HeroInformatica({ color }) {
+  const nodes = [[80,60],[200,45],[320,62],[140,125],[265,120]];
+  const links = [[0,1],[1,2],[0,3],[3,4],[4,2],[1,4]];
+  return (
+    <svg viewBox="0 0 400 180" xmlns="http://www.w3.org/2000/svg"
+      style={{ position:"absolute", inset:0, width:"100%", height:"100%" }}>
+      <rect width="400" height="180" fill="#0a1520"/>
+      {links.map(([a,b],i) => (
+        <line key={i} x1={nodes[a][0]} y1={nodes[a][1]} x2={nodes[b][0]} y2={nodes[b][1]}
+          stroke={color} strokeWidth=".8" opacity=".28"/>
+      ))}
+      {nodes.map(([x,y],i) => (
+        <g key={i}>
+          <rect x={x-11} y={y-8} width="22" height="16" rx="3"
+            fill="#0a1520" stroke={color} strokeWidth="1" opacity=".8"/>
+          <circle cx={x} cy={y} r="2" fill={color} opacity=".9"/>
+        </g>
+      ))}
+      <rect x="186" y="28" width="28" height="6" rx="2" fill={color} opacity=".35"/>
+      <text x="40" y="30" fontSize="9" fill={color} opacity=".7">Red industrial</text>
+      <text x="40" y="42" fontSize="8" fill="#64748b">Nodos y protocolos</text>
+      <text x="330" y="160" fontSize="8" fill="#64748b">OPC UA</text>
+    </svg>
+  );
+}
+
+function HeroMecanica({ color }) {
+  const wave = Array.from({length:150}, (_,i) => {
+    const n = Math.sin(i*.55)*10 + Math.sin(i*1.9)*5 + Math.sin(i*4.3)*2.5;
+    return `${60+i*2},${125-n}`;
+  }).join(" ");
+  return (
+    <svg viewBox="0 0 400 180" xmlns="http://www.w3.org/2000/svg"
+      style={{ position:"absolute", inset:0, width:"100%", height:"100%" }}>
+      <rect width="400" height="180" fill="#1a1206"/>
+      <circle cx="130" cy="70" r="30" fill="none" stroke={color} strokeWidth="1.2" opacity=".75"/>
+      <circle cx="130" cy="70" r="19" fill="none" stroke={color} strokeWidth="1" opacity=".45"/>
+      <circle cx="130" cy="70" r="5" fill={color} opacity=".8"/>
+      {Array.from({length:8}).map((_,i) => {
+        const a = (i*Math.PI)/4;
+        return <circle key={i} cx={130+Math.cos(a)*24.5} cy={70+Math.sin(a)*24.5} r="3.2"
+          fill="none" stroke={color} strokeWidth=".9" opacity=".55"/>;
+      })}
+      <line x1="130" y1="70" x2="330" y2="70" stroke="#fff" strokeOpacity=".14" strokeWidth="2"/>
+      <line x1="60" y1="125" x2="360" y2="125" stroke="#fff" strokeOpacity=".1" strokeWidth="1"/>
+      <polyline points={wave} fill="none" stroke={color} strokeWidth="1.5" opacity=".85"/>
+      <text x="40" y="30" fontSize="9" fill={color} opacity=".7">Análisis de vibraciones</text>
+      <text x="40" y="42" fontSize="8" fill="#64748b">Espectro de rodamiento</text>
+    </svg>
+  );
+}
+
+function HeroAutomatizacion({ color }) {
+  const rungs = [50, 85, 120];
+  return (
+    <svg viewBox="0 0 400 180" xmlns="http://www.w3.org/2000/svg"
+      style={{ position:"absolute", inset:0, width:"100%", height:"100%" }}>
+      <rect width="400" height="180" fill="#04160f"/>
+      <line x1="70" y1="38" x2="70" y2="140" stroke={color} strokeWidth="1.4" opacity=".7"/>
+      <line x1="340" y1="38" x2="340" y2="140" stroke={color} strokeWidth="1.4" opacity=".7"/>
+      {rungs.map((y,i) => (
+        <g key={i}>
+          <line x1="70" y1={y} x2="150" y2={y} stroke={color} strokeWidth="1" opacity=".55"/>
+          <line x1="150" y1={y-9} x2="150" y2={y+9} stroke={color} strokeWidth="1.4" opacity=".85"/>
+          <line x1="163" y1={y-9} x2="163" y2={y+9} stroke={color} strokeWidth="1.4" opacity=".85"/>
+          <line x1="163" y1={y} x2="270" y2={y} stroke={color} strokeWidth="1" opacity=".55"/>
+          <circle cx="285" cy={y} r="9" fill="none" stroke={color} strokeWidth="1.3" opacity=".8"/>
+          <line x1="294" y1={y} x2="340" y2={y} stroke={color} strokeWidth="1" opacity=".55"/>
+        </g>
+      ))}
+      <text x="40" y="30" fontSize="9" fill={color} opacity=".7">Lógica de control</text>
+      <text x="40" y="163" fontSize="8" fill="#64748b">IEC 61131-3 · Ladder</text>
+    </svg>
+  );
+}
+
+function HeroElectronica({ color }) {
+  const pads = [[95,55],[160,55],[225,55],[290,55],[95,130],[160,130],[225,130],[290,130]];
+  return (
+    <svg viewBox="0 0 400 180" xmlns="http://www.w3.org/2000/svg"
+      style={{ position:"absolute", inset:0, width:"100%", height:"100%" }}>
+      <rect width="400" height="180" fill="#0d1608"/>
+      <path d="M95 55 L95 92 L160 92 L160 130" fill="none" stroke={color} strokeWidth="1.1" opacity=".5"/>
+      <path d="M225 55 L225 92 L290 92 L290 130" fill="none" stroke={color} strokeWidth="1.1" opacity=".5"/>
+      <path d="M160 55 L225 55" fill="none" stroke={color} strokeWidth="1.1" opacity=".5"/>
+      <path d="M95 130 L225 130" fill="none" stroke={color} strokeWidth="1.1" opacity=".5"/>
+      <line x1="60" y1="92" x2="95" y2="92" stroke={color} strokeWidth="1.1" opacity=".5"/>
+      <line x1="290" y1="92" x2="345" y2="92" stroke={color} strokeWidth="1.1" opacity=".5"/>
+      {pads.map(([x,y],i) => (
+        <circle key={i} cx={x} cy={y} r="4.5" fill="#0d1608" stroke={color} strokeWidth="1.2" opacity=".9"/>
+      ))}
+      <rect x="176" y="78" width="48" height="30" rx="3" fill="#0d1608" stroke={color} strokeWidth="1.2" opacity=".85"/>
+      <text x="200" y="97" textAnchor="middle" fontSize="8" fill={color} opacity=".8">IC</text>
+      <text x="40" y="30" fontSize="9" fill={color} opacity=".7">Circuito de instrumentación</text>
+      <text x="300" y="163" fontSize="8" fill="#64748b">4–20 mA</text>
+    </svg>
+  );
+}
+
+// Ilustración por categoría: cada artículo nuevo hereda la de su área.
 const HERO_MAP = {
-  "2026-05-19": HeroElectricidad,
-  "2026-05-18": HeroEnergia,
-  "2026-05-17": HeroIA,
+  "Electricidad":    HeroElectricidad,
+  "Energía":         HeroEnergia,
+  "IA":              HeroIA,
+  "Informática":     HeroInformatica,
+  "Mecánica":        HeroMecanica,
+  "Automatización":  HeroAutomatizacion,
+  "Electrónica":     HeroElectronica,
 };
 
 // ═══════════════════════════════════════════════════
@@ -464,7 +637,7 @@ function Onboarding({ onDone, T }) {
 // ═══════════════════════════════════════════════════
 // HEADER CALENDAR
 // ═══════════════════════════════════════════════════
-function HeaderCalendar({ state, setState, T }) {
+function HeaderCalendar({ state, setState, T, articulos }) {
   const init = getMonthYear(state.selectedKey);
   const [open, setOpen] = useState(false);
   const [yr,   setYr]   = useState(init.yr);
@@ -522,9 +695,9 @@ function HeaderCalendar({ state, setState, T }) {
             {cells.map((d, i) => {
               if (!d) return <div key={`_${i}`}/>;
               const k      = toKey(yr, mo, d);
-              const hasArt = !!ARTICLES[k];
+              const hasArt = !!articulos[k];
               const isSel  = state.selectedKey === k;
-              const isTdy  = k === TODAY_KEY;
+              const isTdy  = k === hoyKey();
               const isRead = (state.read || []).includes(k);
               return (
                 <button key={k} disabled={!hasArt}
@@ -601,9 +774,9 @@ function ReadMode({ art, onClose, T }) {
 // ═══════════════════════════════════════════════════
 // TODAY VIEW
 // ═══════════════════════════════════════════════════
-function TodayView({ state, setState, T, showToast, scrollRef }) {
+function TodayView({ state, setState, T, showToast, scrollRef, articulos }) {
   const key      = state.selectedKey;
-  const art      = ARTICLES[key];
+  const art      = articulos[key];
   const saved    = state.saved.includes(key);
   const liked    = state.liked.includes(key);
   const disliked = state.disliked.includes(key);
@@ -626,7 +799,7 @@ function TodayView({ state, setState, T, showToast, scrollRef }) {
       if ((el.scrollTop + el.clientHeight) / el.scrollHeight >= 0.8) {
         setState(s => {
           const withRead = { ...s, read: [...new Set([...(s.read||[]), key])] };
-          return key === TODAY_KEY ? computeStreak(withRead) : withRead;
+          return key === hoyKey() ? computeStreak(withRead) : withRead;
         });
         showToast("Artículo completado ✓");
         el.removeEventListener("scroll", check);
@@ -652,7 +825,7 @@ function TodayView({ state, setState, T, showToast, scrollRef }) {
     </div>
   );
 
-  const HeroIllu  = HERO_MAP[key] ?? null;
+  const HeroIllu  = HERO_MAP[art.shortCategory] ?? null;
   const CatIcComp = CatIcon[art.shortCategory] ?? null;
 
   return (
@@ -665,7 +838,7 @@ function TodayView({ state, setState, T, showToast, scrollRef }) {
         <div style={{ borderRadius:20, overflow:"hidden", border:`1px solid ${T.border}`, background:T.card }}>
           <div style={{ height:180, position:"relative", overflow:"hidden", background:"#0a0f1e" }}>
             {HeroIllu
-              ? <HeroIllu color={art.color}/>
+              ? <HeroIllu color={colorDe(art.shortCategory)}/>
               : <span style={{ position:"absolute", top:"50%", left:"50%",
                   transform:"translate(-50%,-50%)", fontSize:64, opacity:.4 }}>?</span>
             }
@@ -751,11 +924,11 @@ function TodayView({ state, setState, T, showToast, scrollRef }) {
 // ═══════════════════════════════════════════════════
 // ARCHIVE VIEW
 // ═══════════════════════════════════════════════════
-function ArchiveView({ state, setState, T }) {
+function ArchiveView({ state, setState, T, articulos }) {
   const [query, setQuery] = useState("");
 
   const savedArts = useMemo(
-    () => state.saved.map(k => ({ k, art:ARTICLES[k] })).filter(x => x.art),
+    () => state.saved.map(k => ({ k, art:articulos[k] })).filter(x => x.art),
     [state.saved]
   );
   const byCat = useMemo(
@@ -913,8 +1086,7 @@ function EditField({ value, onChange, T }) {
         style={{ flex:1, background:T.inputBg, border:`1px solid ${T.accent}`,
           borderRadius:8, padding:"5px 10px", color:T.text, fontSize:12, outline:"none" }}/>
       <button onClick={commit}
-        style={{ background:T.accent, border:"none", borderRadius:8, padding:"5px 10px",
-          color:"#0f172a", fontWeight:700, fontSize:11, cursor:"pointer" }}>✓</button>
+        style={{ background:T.accent, border:"none", borderRadius:8, padding:"5px 10px", color:"#0f172a", fontWeight:700, fontSize:11, cursor:"pointer" }}>✓</button>
       <button onClick={() => setEditing(false)}
         style={{ background:"none", border:`1px solid ${T.border}`, borderRadius:8, padding:"5px 10px",
           color:T.muted, fontSize:11, cursor:"pointer" }}>✕</button>
@@ -936,10 +1108,10 @@ function EditField({ value, onChange, T }) {
   );
 }
 
-function ProfileView({ state, setState, T, showToast }) {
+function ProfileView({ state, setState, T, showToast, articulos }) {
   const favCat = useMemo(() => {
     const counts = {};
-    state.saved.forEach(k => { const a = ARTICLES[k]; if(a) counts[a.shortCategory]=(counts[a.shortCategory]||0)+1; });
+    state.saved.forEach(k => { const a = articulos[k]; if(a) counts[a.shortCategory]=(counts[a.shortCategory]||0)+1; });
     return Object.entries(counts).sort(([,a],[,b]) => b-a)[0]?.[0] ?? null;
   }, [state.saved]);
 
@@ -989,13 +1161,41 @@ function ProfileView({ state, setState, T, showToast }) {
         );
       })()}
 
+      {/* Reporte del piloto */}
+      <Card T={T} title="Reporte del piloto" icon={<Ic.Star/>}>
+        <p style={{ fontSize:11, color:T.muted, lineHeight:1.6, marginBottom:10 }}>
+          Copia este código y entrégalo al cierre de cada semana. Resume tu uso
+          y no contiene datos personales.
+        </p>
+        <div style={{ background:T.pill, border:`1px solid ${T.border}`, borderRadius:12,
+          padding:"11px 13px", marginBottom:9 }}>
+          <code style={{ fontFamily:"'IBM Plex Mono', ui-monospace, monospace",
+            fontSize:11, color:T.accent, wordBreak:"break-all", lineHeight:1.6 }}>
+            {codigoResumen(state, articulos)}
+          </code>
+        </div>
+        <PressBtn
+          onClick={async () => {
+            const c = codigoResumen(state, articulos);
+            try {
+              if (navigator?.clipboard) { await navigator.clipboard.writeText(c); showToast("Código copiado ✓"); }
+              else                      { showToast("Copia el código a mano"); }
+            } catch { showToast("Copia el código a mano"); }
+          }}
+          style={{ width:"100%", padding:"10px", borderRadius:11, cursor:"pointer",
+            background:T.accentBg, border:`1px solid ${T.accent}55`, color:T.accent,
+            fontFamily:FONT, fontSize:12, fontWeight:600 }}>
+          Copiar código
+        </PressBtn>
+      </Card>
+
       {/* Account */}
       <Card T={T} title="Cuenta" icon={<Ic.User/>}>
         <div style={{ background:T.pill, border:`1px solid ${T.border}`, borderRadius:12, padding:"11px 13px" }}>
           <EditField value={state.userName} onChange={v => setState(s=>({...s,userName:v}))} T={T}/>
           <div style={{ height:1, background:T.border, margin:"8px 0" }}/>
           <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-            <Ic.Mail/> <span style={{ fontSize:11, color:T.muted }}>{state.userEmail}</span>
+            <Ic.Mail/> <span style={{ fontSize:11, color:T.muted }}>{state.userEmail || "Sin correo registrado"}</span>
           </div>
         </div>
       </Card>
@@ -1081,15 +1281,368 @@ const NAV_TABS = [
 // ═══════════════════════════════════════════════════
 // APP ROOT
 // ═══════════════════════════════════════════════════
+
+
+// En un teléfono la app ocupa toda la pantalla. El marco de teléfono
+// solo tiene sentido como vista previa en un computador.
+function useEsMovil() {
+  const [esMovil, setEsMovil] = useState(
+    typeof window !== "undefined" && window.matchMedia("(max-width: 560px)").matches);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 560px)");
+    const cambio = (e) => setEsMovil(e.matches);
+    mq.addEventListener ? mq.addEventListener("change", cambio) : mq.addListener(cambio);
+    return () => mq.removeEventListener ? mq.removeEventListener("change", cambio) : mq.removeListener(cambio);
+  }, []);
+  return esMovil;
+}
+
+// ═══════════════════════════════════════════════════
+// CÓDIGO DE RESUMEN  ·  métricas del piloto
+// El estudiante lo copia y lo entrega. Nada se envía solo.
+// Formato: ING1-AAMMDD-R#G#L#D#K#-CATn...-XX
+// ═══════════════════════════════════════════════════
+const ABREV = {
+  "Electricidad":"ELE", "Mecánica":"MEC", "Automatización":"AUT",
+  "Electrónica":"ETR",  "Informática":"INF", "Energía":"ENE", "IA":"IIA",
+};
+
+function codigoResumen(state, articulos) {
+  const porCat = {};
+  (state.read || []).forEach(k => {
+    const a = articulos[k];
+    if (a) porCat[a.shortCategory] = (porCat[a.shortCategory] || 0) + 1;
+  });
+  const cats = ORDEN_CATEGORIAS.filter(c => porCat[c])
+                               .map(c => `${ABREV[c]}${porCat[c]}`).join("");
+  const cuerpo = [
+    hoyKey().replace(/-/g,"").slice(2),
+    `R${(state.read||[]).length}`,
+    `G${(state.saved||[]).length}`,
+    `L${(state.liked||[]).length}`,
+    `D${(state.disliked||[]).length}`,
+    `K${state.streakCount || 0}`,
+    cats || "SIN",
+  ].join("-");
+  // Dígito verificador: detecta errores al transcribir a mano.
+  let suma = 0;
+  for (const ch of cuerpo) suma = (suma * 31 + ch.charCodeAt(0)) % 1296;
+  return `ING1-${cuerpo}-${suma.toString(36).toUpperCase().padStart(2,"0")}`;
+}
+
+// ═══════════════════════════════════════════════════
+// MODO REVISIÓN  ·  mesa de verificación docente
+// Fuera del alcance del estudiante. Se abre con #revision.
+// Ningún artículo llega a publicarse sin pasar por aquí.
+// ═══════════════════════════════════════════════════
+const MONO = "'IBM Plex Mono', ui-monospace, monospace";
+const R = {
+  fondo:"#14120f", panel:"#1c1915", linea:"#332e26",
+  tinta:"#f2ece1", suave:"#a89e8f", tenue:"#6d6558",
+  pendiente:"#d9a441", aprobado:"#5f9e6e", rechazado:"#c2614f", corregir:"#7a8fb8",
+};
+const VEREDICTOS = [
+  { id:"aprobado",  etiqueta:"Aprobar",  tecla:"A", color:R.aprobado  },
+  { id:"corregir",  etiqueta:"Corregir", tecla:"C", color:R.corregir  },
+  { id:"rechazado", etiqueta:"Rechazar", tecla:"R", color:R.rechazado },
+];
+const colorEstado = (e) => R[e] ?? R.pendiente;
+
+// Vista fiel de lo que verá el estudiante, al ancho real del teléfono.
+function VistaArticulo({ art, fecha }) {
+  const Illu = HERO_MAP[art.shortCategory] ?? null;
+  const col  = colorDe(art.shortCategory);
+  const secciones = [
+    ["Contexto técnico",  art.context],
+    ["En detalle",        art.detail],
+    ["Aplicación con IA", art.ai],
+    ["Historia técnica",  art.history],
+    ["Conceptos clave",   art.keyConcepts],
+  ];
+  return (
+    <div style={{ width:390, flexShrink:0, background:"#0f1117", borderRadius:26,
+      border:`1px solid ${R.linea}`, overflow:"hidden", fontFamily:FONT }}>
+      <div style={{ height:180, position:"relative", background:"#0a0f1e" }}>
+        {Illu && <Illu color={col}/>}
+        <div style={{ position:"absolute", inset:"auto 0 0 0", padding:"12px 16px",
+          background:"linear-gradient(to top, rgba(0,0,0,.9), transparent)" }}>
+          <p style={{ margin:0, fontSize:10, fontWeight:700, letterSpacing:1, color:col }}>
+            {art.shortCategory.toUpperCase()}
+          </p>
+          <h2 style={{ margin:"3px 0 0", fontSize:17, fontWeight:700, color:"#fff", lineHeight:1.3 }}>
+            {art.title}
+          </h2>
+        </div>
+      </div>
+      <div style={{ padding:"14px 16px 20px" }}>
+        <p style={{ margin:"0 0 4px", fontFamily:MONO, fontSize:10, color:R.tenue }}>
+          {fecha} · {art.readingMin} min
+        </p>
+        <p style={{ fontSize:12, lineHeight:1.7, color:"#cbd5e1", margin:"8px 0 16px" }}>
+          {art.description}
+        </p>
+        {secciones.map(([t, texto]) => (
+          <div key={t} style={{ marginBottom:15 }}>
+            <p style={{ margin:"0 0 5px", fontSize:10, fontWeight:700, letterSpacing:1,
+              textTransform:"uppercase", color:col }}>{t}</p>
+            <p style={{ margin:0, fontSize:12.5, lineHeight:1.75, color:"#cbd5e1" }}>{texto}</p>
+          </div>
+        ))}
+        <div style={{ borderTop:`1px solid #24304a`, paddingTop:12 }}>
+          <p style={{ margin:"0 0 6px", fontFamily:MONO, fontSize:10, letterSpacing:1, color:R.tenue }}>FUENTES</p>
+          {art.sources.map(s => (
+            <p key={s} style={{ margin:"0 0 4px", fontSize:11, color:"#94a3b8" }}>· {s}</p>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RevisionView({ onSalir }) {
+  const [borrador, setBorrador] = useState(() => normalizarMes({ articulos: CONTENIDO_DEMO }));
+  const [pegado,   setPegado]   = useState("");
+  const [abrirPegar, setAbrirPegar] = useState(false);
+  const [decisiones, setDecisiones] = useState({});
+  const [i, setI] = useState(0);
+  const [nota, setNota] = useState("");
+  const [salida, setSalida] = useState(null);
+
+  const fechas = useMemo(() => Object.keys(borrador.articulos).sort(), [borrador]);
+  const fecha  = fechas[i];
+  const art    = borrador.articulos[fecha];
+  const actual = decisiones[fecha];
+
+  useEffect(() => { setNota(actual?.nota ?? ""); }, [fecha]);
+
+  const total     = fechas.length;
+  const resueltos = fechas.filter(f => decisiones[f]).length;
+  const cuenta    = (e) => fechas.filter(f => decisiones[f]?.estado === e).length;
+
+  function decidir(estado) {
+    setDecisiones(d => ({ ...d, [fecha]: { estado, nota: nota.trim() } }));
+    if (i < total - 1) setI(i + 1);
+  }
+
+  function cargarPegado() {
+    try {
+      const res = normalizarMes(JSON.parse(pegado));
+      if (!Object.keys(res.articulos).length) { alert("El archivo no trae artículos válidos."); return; }
+      setBorrador(res); setDecisiones({}); setI(0); setAbrirPegar(false); setPegado("");
+    } catch { alert("No se pudo leer el JSON. Revisa que esté completo."); }
+  }
+
+  function exportar() {
+    const aprobados = {};
+    fechas.forEach(f => { if (decisiones[f]?.estado === "aprobado") aprobados[f] = borrador.articulos[f]; });
+    const doc = {
+      version: ESQUEMA_VERSION,
+      revisadoEn: new Date().toISOString(),
+      resumen: { total, aprobados: cuenta("aprobado"), corregir: cuenta("corregir"), rechazados: cuenta("rechazado") },
+      decisiones,
+      articulos: aprobados,
+    };
+    const txt = JSON.stringify(doc, null, 2);
+    setSalida(txt);
+    navigator?.clipboard?.writeText(txt).catch(()=>{});
+  }
+
+  const btn = {
+    fontFamily:FONT, fontSize:12, fontWeight:600, cursor:"pointer",
+    borderRadius:9, padding:"7px 12px", background:"none", color:R.suave,
+    border:`1px solid ${R.linea}`,
+  };
+
+  return (
+    <div style={{ minHeight:"100vh", background:R.fondo, color:R.tinta,
+      fontFamily:FONT, padding:"20px 18px 40px", boxSizing:"border-box" }}>
+
+      {/* Encabezado */}
+      <div style={{ display:"flex", flexWrap:"wrap", gap:12, alignItems:"baseline",
+        justifyContent:"space-between", borderBottom:`1px solid ${R.linea}`, paddingBottom:14, marginBottom:18 }}>
+        <div>
+          <h1 style={{ margin:0, fontSize:17, fontWeight:600, letterSpacing:.2 }}>
+            Verificación de contenido
+          </h1>
+          <p style={{ margin:"3px 0 0", fontFamily:MONO, fontSize:11, color:R.tenue }}>
+            IngenieDía · borrador · nada se publica sin aprobación
+          </p>
+        </div>
+        <div style={{ display:"flex", gap:8 }}>
+          <button style={btn} onClick={() => setAbrirPegar(v=>!v)}>Cargar borrador</button>
+          <button style={btn} onClick={onSalir}>Salir</button>
+        </div>
+      </div>
+
+      {abrirPegar && (
+        <div style={{ marginBottom:18, background:R.panel, border:`1px solid ${R.linea}`,
+          borderRadius:12, padding:14 }}>
+          <p style={{ margin:"0 0 8px", fontSize:12, color:R.suave }}>
+            Pega aquí el JSON del mes generado por el script.
+          </p>
+          <textarea value={pegado} onChange={e=>setPegado(e.target.value)}
+            placeholder='{ "mes": "2026-10", "articulos": { ... } }'
+            style={{ width:"100%", height:120, background:R.fondo, color:R.tinta, fontFamily:MONO,
+              fontSize:11, border:`1px solid ${R.linea}`, borderRadius:8, padding:10,
+              boxSizing:"border-box", resize:"vertical" }}/>
+          <button onClick={cargarPegado}
+            style={{ ...btn, marginTop:8, borderColor:R.pendiente, color:R.pendiente }}>
+            Cargar
+          </button>
+        </div>
+      )}
+
+      {borrador.errores.length > 0 && (
+        <div style={{ marginBottom:16, border:`1px solid ${R.rechazado}55`, borderRadius:10,
+          background:`${R.rechazado}12`, padding:"10px 13px" }}>
+          <p style={{ margin:"0 0 5px", fontSize:12, fontWeight:600, color:R.rechazado }}>
+            {borrador.errores.length} artículo(s) descartados por el validador
+          </p>
+          {borrador.errores.map(e => (
+            <p key={e} style={{ margin:"0 0 2px", fontFamily:MONO, fontSize:11, color:R.suave }}>{e}</p>
+          ))}
+        </div>
+      )}
+
+      <div style={{ display:"flex", gap:22, alignItems:"flex-start", flexWrap:"wrap" }}>
+
+        {/* Pliego: estado de todos los artículos de un vistazo */}
+        <div style={{ width:62, flexShrink:0 }}>
+          <p style={{ margin:"0 0 8px", fontFamily:MONO, fontSize:10, color:R.tenue, letterSpacing:1 }}>
+            {resueltos}/{total}
+          </p>
+          <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
+            {fechas.map((f, n) => {
+              const est = decisiones[f]?.estado;
+              const sel = n === i;
+              return (
+                <button key={f} onClick={() => setI(n)} title={f}
+                  style={{ display:"flex", alignItems:"center", gap:5, cursor:"pointer",
+                    background: sel ? R.panel : "none", border:"none", borderRadius:5,
+                    padding:"3px 4px", textAlign:"left" }}>
+                  <span style={{ width:3, height:15, borderRadius:2, flexShrink:0,
+                    background: est ? colorEstado(est) : R.linea }}/>
+                  <span style={{ fontFamily:MONO, fontSize:10.5,
+                    color: sel ? R.tinta : R.tenue }}>{String(n+1).padStart(2,"0")}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Lo que verá el estudiante */}
+        {art
+          ? <VistaArticulo art={art} fecha={fecha}/>
+          : <p style={{ color:R.suave }}>No hay artículos en el borrador.</p>}
+
+        {/* Panel de veredicto */}
+        {art && (
+          <div style={{ flex:1, minWidth:270, maxWidth:400 }}>
+            <p style={{ margin:0, fontFamily:MONO, fontSize:11, color:R.tenue, letterSpacing:1 }}>
+              ARTÍCULO {String(i+1).padStart(2,"0")} DE {String(total).padStart(2,"0")}
+            </p>
+            <p style={{ margin:"6px 0 16px", fontSize:14, lineHeight:1.5 }}>{art.title}</p>
+
+            <p style={{ margin:"0 0 8px", fontFamily:MONO, fontSize:10.5, color:R.tenue, letterSpacing:1 }}>
+              QUÉ ESTÁS VERIFICANDO
+            </p>
+            <ol style={{ margin:"0 0 18px", paddingLeft:17, fontSize:12, lineHeight:1.85, color:R.suave }}>
+              <li>Que las normas citadas existan y digan esto.</li>
+              <li>Que el nivel calce con tus estudiantes.</li>
+              <li>Que la sección de IA aporte algo real.</li>
+              <li>Que se lea bien en pantalla de teléfono.</li>
+            </ol>
+
+            <textarea value={nota} onChange={e => setNota(e.target.value)}
+              placeholder="Motivo o corrección. Vuelve al generador como instrucción."
+              style={{ width:"100%", height:70, background:R.panel, color:R.tinta, fontFamily:FONT,
+                fontSize:12, border:`1px solid ${R.linea}`, borderRadius:9, padding:10,
+                boxSizing:"border-box", resize:"vertical", marginBottom:10 }}/>
+
+            <div style={{ display:"flex", gap:7, marginBottom:14 }}>
+              {VEREDICTOS.map(v => {
+                const activo = actual?.estado === v.id;
+                return (
+                  <button key={v.id} onClick={() => decidir(v.id)}
+                    style={{ flex:1, cursor:"pointer", borderRadius:9, padding:"9px 6px",
+                      fontFamily:FONT, fontSize:12, fontWeight:600,
+                      background: activo ? v.color : "none",
+                      color: activo ? R.fondo : v.color,
+                      border:`1px solid ${v.color}${activo ? "" : "66"}` }}>
+                    {v.etiqueta}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div style={{ display:"flex", gap:7, marginBottom:20 }}>
+              <button style={{ ...btn, flex:1 }} disabled={i===0}
+                onClick={() => setI(n => Math.max(0, n-1))}>← Anterior</button>
+              <button style={{ ...btn, flex:1 }} disabled={i>=total-1}
+                onClick={() => setI(n => Math.min(total-1, n+1))}>Siguiente →</button>
+            </div>
+
+            <div style={{ borderTop:`1px solid ${R.linea}`, paddingTop:14 }}>
+              {VEREDICTOS.map(v => (
+                <div key={v.id} style={{ display:"flex", justifyContent:"space-between",
+                  fontFamily:MONO, fontSize:11, color:R.suave, marginBottom:4 }}>
+                  <span>{v.etiqueta.toLowerCase()}</span>
+                  <span style={{ color:v.color }}>{String(cuenta(v.id)).padStart(2,"0")}</span>
+                </div>
+              ))}
+              <button onClick={exportar} disabled={!resueltos}
+                style={{ ...btn, width:"100%", marginTop:12, padding:"10px",
+                  borderColor: resueltos ? R.pendiente : R.linea,
+                  color: resueltos ? R.pendiente : R.tenue,
+                  cursor: resueltos ? "pointer" : "default" }}>
+                Exportar decisiones{resueltos < total ? ` (${resueltos} de ${total})` : ""}
+              </button>
+              {salida && (
+                <>
+                  <p style={{ margin:"10px 0 6px", fontSize:11, color:R.aprobado }}>
+                    Copiado al portapapeles.
+                  </p>
+                  <textarea readOnly value={salida}
+                    style={{ width:"100%", height:110, background:R.panel, color:R.suave,
+                      fontFamily:MONO, fontSize:10, border:`1px solid ${R.linea}`,
+                      borderRadius:8, padding:9, boxSizing:"border-box" }}/>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [state, setStateRaw] = useState(DEFAULT_STATE);
   const [ready, setReady]    = useState(false);
+  const [articulos, setArticulos] = useState({});
+  const [avisos,    setAvisos]    = useState([]);
+  const [revision,  setRevision]  = useState(
+    typeof window !== "undefined" && window.location.hash === "#revision");
+  const esMovil              = useEsMovil();
   const scrollRef            = useRef(null);
   const toast                = useToast();
   const T                    = THEMES[state.theme] ?? THEMES.dark;
 
+  // El mes se deduce de la fecha elegida: cambiar de mes carga otro archivo.
+  const mesActual = mesDe(state.selectedKey || hoyKey());
   useEffect(() => {
-    storeHydrate(DEFAULT_STATE).then(s => { setStateRaw(s); setReady(true); });
+    let vigente = true;
+    cargarMes(mesActual).then(({ articulos:arts, errores }) => {
+      if (!vigente) return;
+      setArticulos(prev => ({ ...prev, ...arts }));
+      setAvisos(errores);
+    });
+    return () => { vigente = false; };
+  }, [mesActual]);
+
+  useEffect(() => {
+    storeHydrate(DEFAULT_STATE).then(s => { setStateRaw({ ...s, selectedKey: hoyKey() }); setReady(true); });
   }, []);
 
   const setState = useCallback(fn => {
@@ -1106,7 +1659,7 @@ export default function App() {
   }, [setState]);
 
   function renderView() {
-    const props = { state, setState, T, showToast:toast.show };
+    const props = { state, setState, T, showToast:toast.show, articulos };
     switch (state.tab) {
       case "archive": return <ArchiveView {...props}/>;
       case "profile": return <ProfileView {...props}/>;
@@ -1114,24 +1667,32 @@ export default function App() {
     }
   }
 
-  return (
-    <div style={{ minHeight:"100vh", width:"100%", background:T.wallBg,
-      display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"flex-start",
-      padding:"20px 12px 32px", boxSizing:"border-box", fontFamily:FONT }}>
+  if (revision) return <RevisionView onSalir={() => {
+    if (typeof window !== "undefined") window.location.hash = "";
+    setRevision(false);
+  }}/>;
 
-      {/* Top label */}
-      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
+  return (
+    <div style={{ minHeight:"100dvh", width:"100%",
+      background: esMovil ? T.bg : T.wallBg,
+      display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"flex-start",
+      padding: esMovil ? 0 : "20px 12px 32px", boxSizing:"border-box", fontFamily:FONT }}>
+
+      {/* Top label — solo en computador */}
+      {!esMovil && <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
         <span style={{ fontSize:20, fontWeight:700, color:T.text, letterSpacing:.3 }}>IngenieDía</span>
         <span style={{ fontSize:10, color:T.muted, border:`1px solid ${T.border}`, borderRadius:7, padding:"2px 7px" }}>
           v{APP_VERSION}
         </span>
-      </div>
+      </div>}
 
-      {/* Phone shell */}
-      <div style={{ width:"100%", maxWidth:390, borderRadius:36, overflow:"hidden",
-        border:`1.5px solid ${T.border}`, background:T.bg,
-        display:"flex", flexDirection:"column",
-        height:"min(780px, calc(100vh - 100px))",
+      {/* Cuerpo de la app */}
+      <div style={{ width:"100%", background:T.bg,
+        maxWidth:     esMovil ? "none" : 390,
+        borderRadius: esMovil ? 0 : 36,
+        border:       esMovil ? "none" : `1.5px solid ${T.border}`,
+        height:       esMovil ? "100dvh" : "min(780px, calc(100vh - 100px))",
+        overflow:"hidden", display:"flex", flexDirection:"column",
         fontSize:`${state.fontScale}rem`, position:"relative" }}>
 
         {/* Onboarding */}
@@ -1141,11 +1702,12 @@ export default function App() {
         {/* Toast */}
         <Toast message={toast.msg} visible={toast.vis}/>
 
-        {/* Status bar */}
+        {/* Barra superior. En móvil no se simula hora ni batería:
+            el teléfono ya tiene las suyas. Solo se conserva la racha. */}
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center",
-          padding:"10px 20px 4px", flexShrink:0, background:T.bg }}>
+          padding: esMovil ? "8px 16px 2px" : "10px 20px 4px", flexShrink:0, background:T.bg }}>
           <div style={{ display:"flex", alignItems:"center", gap:7 }}>
-            <span style={{ fontSize:11, fontWeight:700, color:T.text }}>9:41</span>
+            {!esMovil && <span style={{ fontSize:11, fontWeight:700, color:T.text }}>9:41</span>}
             {(state.streakCount||0) > 0 && (
               <span style={{ fontSize:10, color:"#f97316", display:"flex", alignItems:"center", gap:2,
                 background:"rgba(249,115,22,0.1)", borderRadius:10, padding:"1px 6px" }}>
@@ -1153,9 +1715,11 @@ export default function App() {
               </span>
             )}
           </div>
-          <div style={{ display:"flex", alignItems:"center", gap:4, color:T.muted }}>
-            <Ic.ZapFill s={11}/><span style={{ fontSize:10 }}>100%</span>
-          </div>
+          {!esMovil && (
+            <div style={{ display:"flex", alignItems:"center", gap:4, color:T.muted }}>
+              <Ic.ZapFill s={11}/><span style={{ fontSize:10 }}>100%</span>
+            </div>
+          )}
         </div>
 
         {/* App header */}
@@ -1164,7 +1728,7 @@ export default function App() {
             <div>
               <div style={{ fontSize:19, fontWeight:700, color:T.text, letterSpacing:.2 }}>IngenieDía</div>
               <div style={{ fontSize:10, color:T.muted }}>Tu dosis diaria de ingeniería</div>
-              <HeaderCalendar state={state} setState={setState} T={T}/>
+              <HeaderCalendar state={state} setState={setState} T={T} articulos={articulos}/>
             </div>
             <div style={{ width:40, height:40, borderRadius:13, flexShrink:0,
               border:`1px solid ${T.accent}44`, background:`${T.accent}10`,
@@ -1182,7 +1746,9 @@ export default function App() {
 
         {/* Bottom nav */}
         <nav style={{ display:"flex", height:58, flexShrink:0,
-          background:T.navBg, borderTop:`1px solid ${T.border}`, zIndex:10 }}>
+          background:T.navBg, borderTop:`1px solid ${T.border}`, zIndex:10,
+          paddingBottom:"env(safe-area-inset-bottom, 0px)",
+          boxSizing:"content-box" }}>
           {NAV_TABS.map(({ key, label, AIcon, IIcon }) => {
             const active = state.tab === key;
             return (
@@ -1201,9 +1767,20 @@ export default function App() {
         </nav>
       </div>
 
-      <p style={{ marginTop:10, fontSize:10, color:T.muted, textAlign:"center" }}>
-        Estado guardado automáticamente · {Object.keys(ARTICLES).length} artículos disponibles
-      </p>
+      {!esMovil && (
+        <>
+          <p style={{ marginTop:10, fontSize:10, color:T.muted, textAlign:"center" }}>
+            Estado guardado automáticamente · {Object.keys(articulos).length} artículos disponibles
+            {avisos.length > 0 && ` · ${avisos.length} descartados`}
+          </p>
+          <button onClick={() => setRevision(true)}
+            style={{ marginTop:6, background:"none", border:"none", cursor:"pointer",
+              fontFamily:FONT, fontSize:10, color:T.muted, textDecoration:"underline",
+              textUnderlineOffset:3, opacity:.65 }}>
+            Modo revisión
+          </button>
+        </>
+      )}
     </div>
   );
 }
