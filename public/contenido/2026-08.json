@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "mes": "2026-08",
+  "generado": "2026-08-29T00:00:00Z",
+  "articulos": {
+    "2026-08-24": {
+      "shortCategory": "Electricidad",
+      "title": "Protecciones eléctricas y selectividad",
+      "description": "Una revisión breve sobre cómo la coordinación entre protecciones permite mejorar la seguridad y continuidad operacional en instalaciones eléctricas.",
+      "context": "En una instalación eléctrica, las protecciones no solo deben interrumpir una falla, sino hacerlo de manera ordenada. La selectividad busca que opere primero la protección más cercana al punto de falla, evitando desconexiones innecesarias en otros sectores del sistema.",
+      "detail": "La coordinación entre interruptores, fusibles y diferenciales exige revisar corriente nominal, poder de corte, curvas de disparo, sensibilidad y tiempos de operación. Una mala selección puede generar disparos intempestivos o dejar zonas sin protección efectiva.",
+      "ai": "La IA puede apoyar el análisis de registros de disparo, detectar patrones de fallas repetitivas y sugerir ajustes en estrategias de mantenimiento, siempre bajo validación técnica profesional.",
+      "history": "La evolución de las protecciones eléctricas pasó desde dispositivos simples de interrupción hasta sistemas coordinados capaces de medir, comunicar y actuar con criterios cada vez más precisos.",
+      "keyConcepts": "La selectividad permite que una falla sea despejada por la protección más cercana, reduciendo desconexiones innecesarias y mejorando la continuidad operacional.",
+      "sources": [
+        "IEC 60898-1 · Interruptores automáticos.",
+        "IEC 60947-2 · Aparatos de baja tensión.",
+        "SEC Chile · Pliegos técnicos RIC."
+      ],
+      "readingMin": 2
+    },
+    "2026-08-29": {
+      "shortCategory": "Energía",
+      "title": "Armónicos eléctricos y calidad de energía",
+      "description": "Una mirada breve sobre distorsión armónica, cargas no lineales y sus efectos físicos en sistemas eléctricos modernos.",
+      "context": "Los armónicos aparecen cuando las cargas consumen corriente de forma no sinusoidal. Aunque su frecuencia sea distinta a la fundamental, siguen siendo corrientes que circulan por conductores, transformadores y protecciones.",
+      "detail": "Su presencia puede aumentar pérdidas, calentar equipos, afectar mediciones y deteriorar la calidad de energía. Por eso se analizan parámetros como THD, espectro armónico y compatibilidad entre cargas y red.",
+      "ai": "Los modelos de análisis de datos pueden identificar patrones armónicos asociados a equipos específicos y anticipar condiciones que podrían afectar la operación eléctrica.",
+      "history": "El problema creció con la masificación de electrónica de potencia, variadores de frecuencia, rectificadores, fuentes conmutadas y sistemas de conversión energética.",
+      "keyConcepts": "Los armónicos son corrientes o tensiones de frecuencia múltiplo de la fundamental que pueden provocar pérdidas, calentamiento, errores de medición y menor vida útil de equipos.",
+      "sources": [
+        "IEEE 519 · Control de armónicos.",
+        "IEC 61000 · Compatibilidad electromagnética.",
+        "CIGRÉ · Calidad de energía en sistemas eléctricos."
+      ],
+      "readingMin": 2
+    },
+    "2026-08-30": {
+      "shortCategory": "IA",
+      "title": "Mantenimiento predictivo con IA",
+      "description": "Cómo los datos operacionales pueden anticipar fallas y mejorar decisiones técnicas de mantenimiento.",
+      "context": "El mantenimiento predictivo busca anticipar fallas antes de que ocurran, utilizando datos históricos, mediciones en línea y señales de condición provenientes de equipos críticos.",
+      "detail": "Variables como vibración, temperatura, corriente, presión o ciclos de operación pueden revelar degradación progresiva. El desafío técnico está en distinguir ruido, operación normal y señales tempranas de falla.",
+      "ai": "La IA permite detectar anomalías, clasificar patrones y priorizar inspecciones. Su valor aumenta cuando los datos están bien medidos, contextualizados y validados por especialistas.",
+      "history": "Antes de la digitalización, el mantenimiento se basaba en experiencia, inspección periódica y fallas ocurridas. La sensorización cambió ese enfoque.",
+      "keyConcepts": "El mantenimiento predictivo se basa en observar la condición real de los equipos para anticipar fallas antes de que afecten la operación.",
+      "sources": [
+        "ISO 13374 · Monitoreo de condición.",
+        "ISO 17359 · Diagnóstico de máquinas.",
+        "NIST · IA aplicada a sistemas industriales."
+      ],
+      "readingMin": 2
+    }
+  }
+}
