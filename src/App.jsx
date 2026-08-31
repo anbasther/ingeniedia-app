@@ -1343,57 +1343,88 @@ const R = {
   pendiente:"#d9a441", aprobado:"#5f9e6e", rechazado:"#c2614f", corregir:"#7a8fb8",
 };
 const VEREDICTOS = [
-  { id:"aprobado",  etiqueta:"Aprobar",  tecla:"A", color:R.aprobado  },
-  { id:"corregir",  etiqueta:"Corregir", tecla:"C", color:R.corregir  },
-  { id:"rechazado", etiqueta:"Rechazar", tecla:"R", color:R.rechazado },
+  { id:"aprobado",  etiqueta:"Aprobar",   color:R.aprobado  },
+  { id:"regenerar", etiqueta:"Regenerar", color:R.corregir  },
+  { id:"rechazado", etiqueta:"Rechazar",  color:R.rechazado },
 ];
 const colorEstado = (e) => R[e] ?? R.pendiente;
 
+// Campos de texto largo, en el orden en que se leen.
+const SECCIONES = [
+  ["context",     "Contexto técnico"],
+  ["detail",      "En detalle"],
+  ["ai",          "Aplicación con IA"],
+  ["history",     "Historia técnica"],
+  ["keyConcepts", "Conceptos clave"],
+];
+
+// Un campo se muestra como texto, o como campo editable si la revisión
+// está en modo edición. La tipografía es la misma en ambos casos.
+function Campo({ valor, editable, onCambio, estilo, unaLinea }) {
+  if (!editable) return <p style={estilo}>{valor}</p>;
+  const base = { ...estilo, width:"100%", boxSizing:"border-box",
+    background:"rgba(217,164,65,.07)", border:`1px solid ${R.pendiente}55`,
+    borderRadius:6, padding:"5px 7px", fontFamily:"inherit", outline:"none" };
+  if (unaLinea)
+    return <input value={valor} onChange={e => onCambio(e.target.value)} style={base}/>;
+  const filas = Math.max(2, Math.ceil(valor.length / 42));
+  return <textarea value={valor} rows={filas} onChange={e => onCambio(e.target.value)}
+    style={{ ...base, resize:"vertical", lineHeight:estilo.lineHeight ?? 1.7 }}/>;
+}
+
 // Vista fiel de lo que verá el estudiante, al ancho real del teléfono.
-function VistaArticulo({ art, fecha }) {
+function VistaArticulo({ art, fecha, editable, onCampo }) {
   const Illu = HERO_MAP[art.shortCategory] ?? null;
   const col  = colorDe(art.shortCategory);
-  const secciones = [
-    ["Contexto técnico",  art.context],
-    ["En detalle",        art.detail],
-    ["Aplicación con IA", art.ai],
-    ["Historia técnica",  art.history],
-    ["Conceptos clave",   art.keyConcepts],
-  ];
+  const parrafo = { fontSize:12.5, lineHeight:1.75, color:"#cbd5e1", margin:0 };
+  const rotulo  = { margin:"0 0 5px", fontSize:10, fontWeight:700, letterSpacing:1,
+                    textTransform:"uppercase", color:col };
   return (
     <div style={{ width:390, flexShrink:0, background:"#0f1117", borderRadius:26,
-      border:`1px solid ${R.linea}`, overflow:"hidden", fontFamily:FONT }}>
+      border:`1px solid ${editable ? R.pendiente+"66" : R.linea}`, overflow:"hidden", fontFamily:FONT }}>
       <div style={{ height:180, position:"relative", background:"#0a0f1e" }}>
         {Illu && <Illu color={col}/>}
         <div style={{ position:"absolute", inset:"auto 0 0 0", padding:"12px 16px",
-          background:"linear-gradient(to top, rgba(0,0,0,.9), transparent)" }}>
+          background:"linear-gradient(to top, rgba(0,0,0,.92), transparent)" }}>
           <p style={{ margin:0, fontSize:10, fontWeight:700, letterSpacing:1, color:col }}>
             {art.shortCategory.toUpperCase()}
           </p>
-          <h2 style={{ margin:"3px 0 0", fontSize:17, fontWeight:700, color:"#fff", lineHeight:1.3 }}>
-            {art.title}
-          </h2>
+          <Campo valor={art.title} editable={editable} unaLinea
+            onCambio={v => onCampo("title", v)}
+            estilo={{ margin:"3px 0 0", fontSize:17, fontWeight:700, color:"#fff", lineHeight:1.3 }}/>
         </div>
       </div>
       <div style={{ padding:"14px 16px 20px" }}>
-        <p style={{ margin:"0 0 4px", fontFamily:MONO, fontSize:10, color:R.tenue }}>
+        <p style={{ margin:"0 0 8px", fontFamily:MONO, fontSize:10, color:R.tenue }}>
           {fecha} · {art.readingMin} min
         </p>
-        <p style={{ fontSize:12, lineHeight:1.7, color:"#cbd5e1", margin:"8px 0 16px" }}>
-          {art.description}
-        </p>
-        {secciones.map(([t, texto]) => (
-          <div key={t} style={{ marginBottom:15 }}>
-            <p style={{ margin:"0 0 5px", fontSize:10, fontWeight:700, letterSpacing:1,
-              textTransform:"uppercase", color:col }}>{t}</p>
-            <p style={{ margin:0, fontSize:12.5, lineHeight:1.75, color:"#cbd5e1" }}>{texto}</p>
+        <div style={{ marginBottom:16 }}>
+          <Campo valor={art.description} editable={editable}
+            onCambio={v => onCampo("description", v)} estilo={parrafo}/>
+        </div>
+        {SECCIONES.map(([campo, titulo]) => (
+          <div key={campo} style={{ marginBottom:15 }}>
+            <p style={rotulo}>{titulo}</p>
+            <Campo valor={art[campo]} editable={editable}
+              onCambio={v => onCampo(campo, v)} estilo={parrafo}/>
           </div>
         ))}
-        <div style={{ borderTop:`1px solid #24304a`, paddingTop:12 }}>
-          <p style={{ margin:"0 0 6px", fontFamily:MONO, fontSize:10, letterSpacing:1, color:R.tenue }}>FUENTES</p>
-          {art.sources.map(s => (
-            <p key={s} style={{ margin:"0 0 4px", fontSize:11, color:"#94a3b8" }}>· {s}</p>
-          ))}
+        <div style={{ borderTop:"1px solid #24304a", paddingTop:12 }}>
+          <p style={{ margin:"0 0 6px", fontFamily:MONO, fontSize:10, letterSpacing:1, color:R.tenue }}>
+            FUENTES
+          </p>
+          {editable
+            ? <Campo valor={art.sources.join("\n")} editable
+                onCambio={v => onCampo("sources", v.split("\n"))}
+                estilo={{ fontSize:11, color:"#94a3b8", lineHeight:1.7, margin:0 }}/>
+            : art.sources.map((s,n) => (
+                <p key={n} style={{ margin:"0 0 4px", fontSize:11, color:"#94a3b8" }}>· {s}</p>
+              ))}
+          {editable && (
+            <p style={{ margin:"5px 0 0", fontFamily:MONO, fontSize:9.5, color:R.tenue }}>
+              una fuente por línea
+            </p>
+          )}
         </div>
       </div>
     </div>
@@ -1401,66 +1432,85 @@ function VistaArticulo({ art, fecha }) {
 }
 
 function RevisionView({ onSalir }) {
-  const [borrador, setBorrador] = useState(() => normalizarMes({ articulos: CONTENIDO_DEMO }));
-  const [pegado,   setPegado]   = useState("");
+  const [borrador, setBorrador]     = useState(() => normalizarMes({ articulos: CONTENIDO_DEMO }));
+  const [pegado, setPegado]         = useState("");
   const [abrirPegar, setAbrirPegar] = useState(false);
   const [decisiones, setDecisiones] = useState({});
-  const [i, setI] = useState(0);
-  const [nota, setNota] = useState("");
-  const [salida, setSalida] = useState(null);
+  const [ediciones, setEdiciones]   = useState({});
+  const [editando, setEditando]     = useState(false);
+  const [i, setI]                   = useState(0);
+  const [nota, setNota]             = useState("");
+  const [salida, setSalida]         = useState(null);
 
-  const fechas = useMemo(() => Object.keys(borrador.articulos).sort(), [borrador]);
-  const fecha  = fechas[i];
-  const art    = borrador.articulos[fecha];
-  const actual = decisiones[fecha];
+  const fechas   = useMemo(() => Object.keys(borrador.articulos).sort(), [borrador]);
+  const fecha    = fechas[i];
+  const original = borrador.articulos[fecha];
+  const editado  = ediciones[fecha];
+  const art      = editado ? { ...original, ...editado } : original;
+  const actual   = decisiones[fecha];
 
-  useEffect(() => { setNota(actual?.nota ?? ""); }, [fecha]);
+  useEffect(() => { setNota(actual?.nota ?? ""); setEditando(false); }, [fecha]);
 
   const total     = fechas.length;
   const resueltos = fechas.filter(f => decisiones[f]).length;
   const cuenta    = (e) => fechas.filter(f => decisiones[f]?.estado === e).length;
 
+  function cambiarCampo(campo, valor) {
+    setEdiciones(prev => ({ ...prev, [fecha]: { ...(prev[fecha] || {}), [campo]: valor } }));
+  }
+  function descartarEdicion() {
+    setEdiciones(prev => { const c = { ...prev }; delete c[fecha]; return c; });
+    setEditando(false);
+  }
   function decidir(estado) {
-    setDecisiones(d => ({ ...d, [fecha]: { estado, nota: nota.trim() } }));
+    setDecisiones(d => ({ ...d, [fecha]: { estado, nota: nota.trim(), editado: !!ediciones[fecha] } }));
+    setEditando(false);
     if (i < total - 1) setI(i + 1);
   }
-
   function cargarPegado() {
     try {
       const res = normalizarMes(JSON.parse(pegado));
       if (!Object.keys(res.articulos).length) { alert("El archivo no trae artículos válidos."); return; }
-      setBorrador(res); setDecisiones({}); setI(0); setAbrirPegar(false); setPegado("");
+      setBorrador(res); setDecisiones({}); setEdiciones({}); setI(0);
+      setAbrirPegar(false); setPegado("");
     } catch { alert("No se pudo leer el JSON. Revisa que esté completo."); }
   }
-
   function exportar() {
     const aprobados = {};
-    fechas.forEach(f => { if (decisiones[f]?.estado === "aprobado") aprobados[f] = borrador.articulos[f]; });
+    fechas.forEach(f => {
+      if (decisiones[f]?.estado === "aprobado")
+        aprobados[f] = { ...borrador.articulos[f], ...(ediciones[f] || {}) };
+    });
+    const paraRegenerar = {};
+    fechas.forEach(f => {
+      if (decisiones[f]?.estado === "regenerar")
+        paraRegenerar[f] = { categoria: borrador.articulos[f].shortCategory,
+                             titulo: borrador.articulos[f].title,
+                             instruccion: decisiones[f].nota };
+    });
     const doc = {
       version: ESQUEMA_VERSION,
       revisadoEn: new Date().toISOString(),
-      resumen: { total, aprobados: cuenta("aprobado"), corregir: cuenta("corregir"), rechazados: cuenta("rechazado") },
-      decisiones,
-      articulos: aprobados,
+      resumen: { total, aprobados: cuenta("aprobado"), regenerar: cuenta("regenerar"),
+                 rechazados: cuenta("rechazado"), editados: Object.keys(ediciones).length },
+      decisiones, regenerar: paraRegenerar, articulos: aprobados,
     };
     const txt = JSON.stringify(doc, null, 2);
     setSalida(txt);
-    navigator?.clipboard?.writeText(txt).catch(()=>{});
+    navigator?.clipboard?.writeText(txt).catch(() => {});
   }
 
-  const btn = {
-    fontFamily:FONT, fontSize:12, fontWeight:600, cursor:"pointer",
+  const btn = { fontFamily:FONT, fontSize:12, fontWeight:600, cursor:"pointer",
     borderRadius:9, padding:"7px 12px", background:"none", color:R.suave,
-    border:`1px solid ${R.linea}`,
-  };
+    border:`1px solid ${R.linea}` };
 
   return (
     <div style={{ minHeight:"100vh", background:R.fondo, color:R.tinta,
       fontFamily:FONT, padding:"20px 18px 40px", boxSizing:"border-box" }}>
 
-      {/* Encabezado */}
       <div style={{ display:"flex", flexWrap:"wrap", gap:12, alignItems:"baseline",
-        justifyContent:"space-between", borderBottom:`1px solid ${R.linea}`, paddingBottom:14, marginBottom:18 }}>
+        justifyContent:"space-between", borderBottom:`1px solid ${R.linea}`,
+        paddingBottom:14, marginBottom:18 }}>
         <div>
           <h1 style={{ margin:0, fontSize:17, fontWeight:600, letterSpacing:.2 }}>
             Verificación de contenido
@@ -1470,7 +1520,7 @@ function RevisionView({ onSalir }) {
           </p>
         </div>
         <div style={{ display:"flex", gap:8 }}>
-          <button style={btn} onClick={() => setAbrirPegar(v=>!v)}>Cargar borrador</button>
+          <button style={btn} onClick={() => setAbrirPegar(v => !v)}>Cargar borrador</button>
           <button style={btn} onClick={onSalir}>Salir</button>
         </div>
       </div>
@@ -1481,8 +1531,8 @@ function RevisionView({ onSalir }) {
           <p style={{ margin:"0 0 8px", fontSize:12, color:R.suave }}>
             Pega aquí el JSON del mes generado por el script.
           </p>
-          <textarea value={pegado} onChange={e=>setPegado(e.target.value)}
-            placeholder='{ "mes": "2026-10", "articulos": { ... } }'
+          <textarea value={pegado} onChange={e => setPegado(e.target.value)}
+            placeholder='{ "mes": "2026-11", "articulos": { ... } }'
             style={{ width:"100%", height:120, background:R.fondo, color:R.tinta, fontFamily:MONO,
               fontSize:11, border:`1px solid ${R.linea}`, borderRadius:8, padding:10,
               boxSizing:"border-box", resize:"vertical" }}/>
@@ -1507,7 +1557,6 @@ function RevisionView({ onSalir }) {
 
       <div style={{ display:"flex", gap:22, alignItems:"flex-start", flexWrap:"wrap" }}>
 
-        {/* Pliego: estado de todos los artículos de un vistazo */}
         <div style={{ width:62, flexShrink:0 }}>
           <p style={{ margin:"0 0 8px", fontFamily:MONO, fontSize:10, color:R.tenue, letterSpacing:1 }}>
             {resueltos}/{total}
@@ -1525,38 +1574,62 @@ function RevisionView({ onSalir }) {
                     background: est ? colorEstado(est) : R.linea }}/>
                   <span style={{ fontFamily:MONO, fontSize:10.5,
                     color: sel ? R.tinta : R.tenue }}>{String(n+1).padStart(2,"0")}</span>
+                  {ediciones[f] && <span style={{ fontFamily:MONO, fontSize:9, color:R.pendiente }}>·</span>}
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Lo que verá el estudiante */}
         {art
-          ? <VistaArticulo art={art} fecha={fecha}/>
+          ? <VistaArticulo art={art} fecha={fecha} editable={editando} onCampo={cambiarCampo}/>
           : <p style={{ color:R.suave }}>No hay artículos en el borrador.</p>}
 
-        {/* Panel de veredicto */}
         {art && (
-          <div style={{ flex:1, minWidth:270, maxWidth:400 }}>
+          <div style={{ flex:1, minWidth:280, maxWidth:400 }}>
             <p style={{ margin:0, fontFamily:MONO, fontSize:11, color:R.tenue, letterSpacing:1 }}>
               ARTÍCULO {String(i+1).padStart(2,"0")} DE {String(total).padStart(2,"0")}
+              {editado && <span style={{ color:R.pendiente }}> · EDITADO</span>}
             </p>
-            <p style={{ margin:"6px 0 16px", fontSize:14, lineHeight:1.5 }}>{art.title}</p>
+            <p style={{ margin:"6px 0 14px", fontSize:14, lineHeight:1.5 }}>{art.title}</p>
 
-            <p style={{ margin:"0 0 8px", fontFamily:MONO, fontSize:10.5, color:R.tenue, letterSpacing:1 }}>
-              QUÉ ESTÁS VERIFICANDO
-            </p>
-            <ol style={{ margin:"0 0 18px", paddingLeft:17, fontSize:12, lineHeight:1.85, color:R.suave }}>
-              <li>Que las normas citadas existan y digan esto.</li>
-              <li>Que el nivel calce con tus estudiantes.</li>
-              <li>Que la sección de IA aporte algo real.</li>
-              <li>Que se lea bien en pantalla de teléfono.</li>
-            </ol>
+            <div style={{ display:"flex", gap:7, marginBottom:16 }}>
+              <button onClick={() => setEditando(v => !v)}
+                style={{ ...btn, flex:1,
+                  background: editando ? R.pendiente : "none",
+                  color:      editando ? R.fondo : R.pendiente,
+                  borderColor: R.pendiente + (editando ? "" : "66") }}>
+                {editando ? "Terminar edición" : "Editar texto"}
+              </button>
+              {editado && (
+                <button onClick={descartarEdicion} style={{ ...btn, flex:1 }}>
+                  Descartar cambios
+                </button>
+              )}
+            </div>
+
+            {editando ? (
+              <p style={{ margin:"0 0 16px", fontSize:12, lineHeight:1.7, color:R.suave }}>
+                Escribe directamente sobre el artículo. Los cambios se guardan solos y
+                son los que se publican. No pasan por el generador.
+              </p>
+            ) : (
+              <>
+                <p style={{ margin:"0 0 8px", fontFamily:MONO, fontSize:10.5,
+                  color:R.tenue, letterSpacing:1 }}>QUÉ ESTÁS VERIFICANDO</p>
+                <ol style={{ margin:"0 0 16px", paddingLeft:17, fontSize:12,
+                  lineHeight:1.85, color:R.suave }}>
+                  <li>Que las normas citadas existan y digan esto.</li>
+                  <li>Que el nivel calce con tus estudiantes.</li>
+                  <li>Que la sección de IA aporte algo real.</li>
+                  <li>Que se lea bien en pantalla de teléfono.</li>
+                </ol>
+              </>
+            )}
 
             <textarea value={nota} onChange={e => setNota(e.target.value)}
-              placeholder="Motivo o corrección. Vuelve al generador como instrucción."
-              style={{ width:"100%", height:70, background:R.panel, color:R.tinta, fontFamily:FONT,
+              placeholder="Solo para Regenerar o Rechazar: qué está mal."
+              style={{ width:"100%", height:64, background:R.panel, color:R.tinta, fontFamily:FONT,
                 fontSize:12, border:`1px solid ${R.linea}`, borderRadius:9, padding:10,
                 boxSizing:"border-box", resize:"vertical", marginBottom:10 }}/>
 
@@ -1568,7 +1641,7 @@ function RevisionView({ onSalir }) {
                     style={{ flex:1, cursor:"pointer", borderRadius:9, padding:"9px 6px",
                       fontFamily:FONT, fontSize:12, fontWeight:600,
                       background: activo ? v.color : "none",
-                      color: activo ? R.fondo : v.color,
+                      color:      activo ? R.fondo : v.color,
                       border:`1px solid ${v.color}${activo ? "" : "66"}` }}>
                     {v.etiqueta}
                   </button>
@@ -1577,9 +1650,9 @@ function RevisionView({ onSalir }) {
             </div>
 
             <div style={{ display:"flex", gap:7, marginBottom:20 }}>
-              <button style={{ ...btn, flex:1 }} disabled={i===0}
+              <button style={{ ...btn, flex:1 }} disabled={i === 0}
                 onClick={() => setI(n => Math.max(0, n-1))}>← Anterior</button>
-              <button style={{ ...btn, flex:1 }} disabled={i>=total-1}
+              <button style={{ ...btn, flex:1 }} disabled={i >= total-1}
                 onClick={() => setI(n => Math.min(total-1, n+1))}>Siguiente →</button>
             </div>
 
@@ -1591,11 +1664,18 @@ function RevisionView({ onSalir }) {
                   <span style={{ color:v.color }}>{String(cuenta(v.id)).padStart(2,"0")}</span>
                 </div>
               ))}
+              <div style={{ display:"flex", justifyContent:"space-between",
+                fontFamily:MONO, fontSize:11, color:R.suave }}>
+                <span>editados</span>
+                <span style={{ color:R.pendiente }}>
+                  {String(Object.keys(ediciones).length).padStart(2,"0")}
+                </span>
+              </div>
               <button onClick={exportar} disabled={!resueltos}
                 style={{ ...btn, width:"100%", marginTop:12, padding:"10px",
                   borderColor: resueltos ? R.pendiente : R.linea,
-                  color: resueltos ? R.pendiente : R.tenue,
-                  cursor: resueltos ? "pointer" : "default" }}>
+                  color:       resueltos ? R.pendiente : R.tenue,
+                  cursor:      resueltos ? "pointer" : "default" }}>
                 Exportar decisiones{resueltos < total ? ` (${resueltos} de ${total})` : ""}
               </button>
               {salida && (
