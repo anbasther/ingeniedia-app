@@ -35,7 +35,7 @@ const hoyKey = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 };
-const APP_VERSION = "0.2.1";
+const APP_VERSION = "0.2.2";
 // Texto de lectura: justificado, con guiones automáticos en español para que
 // el justificado no deje espacios anchos en pantallas angostas. "pre-line"
 // respeta los saltos de párrafo que traen los artículos (\n\n).
@@ -1443,8 +1443,32 @@ function VistaArticulo({ art, fecha, editable, onCampo }) {
   );
 }
 
+// Meses publicados que el modo revisión abre solo: el actual y los seis siguientes.
+const MESES_PUBLICADOS_A_REVISAR = 7;
+
+function mesesDesdeHoy(n) {
+  const [y, m] = hoyKey().split("-").map(Number);
+  return Array.from({ length:n }, (_, k) => {
+    const d = new Date(y, m - 1 + k, 1);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+  });
+}
+
+// Devuelve los artículos de un mes publicado, o null si el archivo no existe.
+async function leerMesPublicado(mes) {
+  try {
+    const r = await fetch(`/contenido/${mes}.json`, { cache:"no-cache" });
+    if (!r.ok) return null;
+    return normalizarMes(await r.json());
+  } catch { return null; }
+}
+
+// origen: "cargando" | "publicado" (solo lectura) | "borrador" (se revisa y decide)
+//         | "ejemplos" (no hay nada publicado aún)
 function RevisionView({ onSalir }) {
-  const [borrador, setBorrador]     = useState(() => normalizarMes({ articulos: CONTENIDO_DEMO }));
+  const [borrador, setBorrador]     = useState({ articulos:{}, errores:[] });
+  const [origen, setOrigen]         = useState("cargando");
+  const sePegoBorrador              = useRef(false);
   const [pegado, setPegado]         = useState("");
   const [abrirPegar, setAbrirPegar] = useState(false);
   const [decisiones, setDecisiones] = useState({});
@@ -1453,6 +1477,27 @@ function RevisionView({ onSalir }) {
   const [i, setI]                   = useState(0);
   const [nota, setNota]             = useState("");
   const [salida, setSalida]         = useState(null);
+
+  const soloLectura = origen === "publicado";
+  const hoy         = hoyKey();
+
+  // Al abrir, se cargan los meses ya publicados, incluidos los días futuros.
+  // Si mientras tanto se pegó un borrador, este tiene prioridad.
+  useEffect(() => {
+    let vigente = true;
+    Promise.all(mesesDesdeHoy(MESES_PUBLICADOS_A_REVISAR).map(leerMesPublicado)).then(meses => {
+      if (!vigente) return;
+      const articulos = {}, errores = [];
+      meses.filter(Boolean).forEach(r => { Object.assign(articulos, r.articulos); errores.push(...r.errores); });
+      if (sePegoBorrador.current) return;
+      const hay = Object.keys(articulos).length > 0;
+      const primero = Object.keys(articulos).sort().findIndex(f => f >= hoy);
+      setBorrador(hay ? { articulos, errores } : normalizarMes({ articulos: CONTENIDO_DEMO }));
+      setI(hay && primero > 0 ? primero : 0);
+      setOrigen(hay ? "publicado" : "ejemplos");
+    });
+    return () => { vigente = false; };
+  }, []);
 
   const fechas   = useMemo(() => Object.keys(borrador.articulos).sort(), [borrador]);
   const fecha    = fechas[i];
@@ -1483,7 +1528,7 @@ function RevisionView({ onSalir }) {
     try {
       const res = normalizarMes(JSON.parse(pegado));
       if (!Object.keys(res.articulos).length) { alert("El archivo no trae artículos válidos."); return; }
-      setBorrador(res); setDecisiones({}); setEdiciones({}); setI(0);
+      sePegoBorrador.current = true; setBorrador(res); setOrigen("borrador"); setDecisiones({}); setEdiciones({}); setI(0);
       setAbrirPegar(false); setPegado("");
     } catch { alert("No se pudo leer el JSON. Revisa que esté completo."); }
   }
@@ -1528,7 +1573,12 @@ function RevisionView({ onSalir }) {
             Verificación de contenido
           </h1>
           <p style={{ margin:"3px 0 0", fontFamily:MONO, fontSize:11, color:R.tenue }}>
-            IngenieDía · borrador · nada se publica sin aprobación
+            IngenieDía · {{
+              cargando:  "buscando artículos publicados…",
+              publicado: "publicado · solo lectura",
+              borrador:  "borrador · nada se publica sin aprobación",
+              ejemplos:  "sin artículos publicados · se muestran ejemplos",
+            }[origen]}
           </p>
         </div>
         <div style={{ display:"flex", gap:8 }}>
@@ -1555,6 +1605,17 @@ function RevisionView({ onSalir }) {
         </div>
       )}
 
+      {soloLectura && (
+        <div style={{ marginBottom:16, border:`1px solid ${R.aprobado}55`, borderRadius:10,
+          background:`${R.aprobado}10`, padding:"10px 13px" }}>
+          <p style={{ ...JUSTIFICADO, margin:0, fontSize:12, color:R.suave, lineHeight:1.6 }}>
+            Estos son los artículos que ya están en <span style={{ fontFamily:MONO }}>public/contenido</span>,
+            incluidos los de días que los estudiantes todavía no pueden abrir. Se muestran solo para
+            consulta. Para revisar contenido nuevo, usa «Cargar borrador».
+          </p>
+        </div>
+      )}
+
       {borrador.errores.length > 0 && (
         <div style={{ marginBottom:16, border:`1px solid ${R.rechazado}55`, borderRadius:10,
           background:`${R.rechazado}12`, padding:"10px 13px" }}>
@@ -1571,7 +1632,7 @@ function RevisionView({ onSalir }) {
 
         <div style={{ width:62, flexShrink:0 }}>
           <p style={{ margin:"0 0 8px", fontFamily:MONO, fontSize:10, color:R.tenue, letterSpacing:1 }}>
-            {resueltos}/{total}
+            {soloLectura ? `${total} publ.` : `${resueltos}/${total}`}
           </p>
           <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
             {fechas.map((f, n) => {
@@ -1583,9 +1644,12 @@ function RevisionView({ onSalir }) {
                     background: sel ? R.panel : "none", border:"none", borderRadius:5,
                     padding:"3px 4px", textAlign:"left" }}>
                   <span style={{ width:3, height:15, borderRadius:2, flexShrink:0,
-                    background: est ? colorEstado(est) : R.linea }}/>
+                    background: soloLectura ? (f <= hoy ? R.aprobado : R.pendiente)
+                              : est ? colorEstado(est) : R.linea }}/>
                   <span style={{ fontFamily:MONO, fontSize:10.5,
-                    color: sel ? R.tinta : R.tenue }}>{String(n+1).padStart(2,"0")}</span>
+                    color: sel ? R.tinta : R.tenue }}>
+                    {soloLectura ? `${f.slice(8,10)}/${f.slice(5,7)}` : String(n+1).padStart(2,"0")}
+                  </span>
                   {ediciones[f] && <span style={{ fontFamily:MONO, fontSize:9, color:R.pendiente }}>·</span>}
                 </button>
               );
@@ -1593,11 +1657,34 @@ function RevisionView({ onSalir }) {
           </div>
         </div>
 
-        {art
+        {origen === "cargando"
+          ? <p style={{ color:R.suave, fontSize:13 }}>Cargando artículos publicados…</p>
+          : art
           ? <VistaArticulo art={art} fecha={fecha} editable={editando} onCampo={cambiarCampo}/>
           : <p style={{ color:R.suave }}>No hay artículos en el borrador.</p>}
 
-        {art && (
+        {art && soloLectura && (
+          <div style={{ flex:1, minWidth:280, maxWidth:400 }}>
+            <p style={{ margin:0, fontFamily:MONO, fontSize:11, color:R.tenue, letterSpacing:1 }}>
+              ARTÍCULO {String(i+1).padStart(2,"0")} DE {String(total).padStart(2,"0")} · PUBLICADO
+            </p>
+            <p style={{ margin:"6px 0 10px", fontSize:14, lineHeight:1.5 }}>{art.title}</p>
+            <p style={{ margin:"0 0 18px", fontSize:12, lineHeight:1.6,
+              color: fecha <= hoy ? R.aprobado : R.pendiente }}>
+              {fecha <= hoy
+                ? `Visible para los estudiantes desde el ${fmtDate(fecha)}.`
+                : `Oculto para los estudiantes hasta el ${fmtDate(fecha)}.`}
+            </p>
+            <div style={{ display:"flex", gap:7 }}>
+              <button style={{ ...btn, flex:1 }} disabled={i === 0}
+                onClick={() => setI(n => Math.max(0, n-1))}>← Anterior</button>
+              <button style={{ ...btn, flex:1 }} disabled={i >= total-1}
+                onClick={() => setI(n => Math.min(total-1, n+1))}>Siguiente →</button>
+            </div>
+          </div>
+        )}
+
+        {art && !soloLectura && origen !== "cargando" && (
           <div style={{ flex:1, minWidth:280, maxWidth:400 }}>
             <p style={{ margin:0, fontFamily:MONO, fontSize:11, color:R.tenue, letterSpacing:1 }}>
               ARTÍCULO {String(i+1).padStart(2,"0")} DE {String(total).padStart(2,"0")}
