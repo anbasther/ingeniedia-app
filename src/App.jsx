@@ -35,7 +35,12 @@ const hoyKey = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 };
-const APP_VERSION = "0.2.0";
+const APP_VERSION = "0.2.1";
+// Texto de lectura: justificado, con guiones automáticos en español para que
+// el justificado no deje espacios anchos en pantallas angostas. "pre-line"
+// respeta los saltos de párrafo que traen los artículos (\n\n).
+const JUSTIFICADO = { textAlign:"justify", hyphens:"auto", WebkitHyphens:"auto" };
+const TEXTO_LARGO = { ...JUSTIFICADO, whiteSpace:"pre-line" };
 const FONT        = "'IBM Plex Sans', system-ui, sans-serif";
 const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 const DAYS   = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
@@ -543,7 +548,7 @@ function SectionBlock({ icon, title, children, T }) {
         </span>
         <span style={{ fontSize:13, fontWeight:600, color:T.text }}>{title}</span>
       </div>
-      <p style={{ fontSize:12, color:T.sub, lineHeight:1.7, margin:0 }}>{children}</p>
+      <p style={{ ...JUSTIFICADO, fontSize:12, color:T.sub, lineHeight:1.7, margin:0 }}>{children}</p>
     </div>
   );
 }
@@ -621,7 +626,7 @@ function Onboarding({ onDone, T }) {
       </div>
       <div key={slide} style={{ fontSize:56, marginBottom:24, animation:"fadeUp .35s ease" }}>{icon}</div>
       <h2 style={{ fontSize:20, fontWeight:700, color:T.text, textAlign:"center", margin:"0 0 12px", lineHeight:1.3 }}>{title}</h2>
-      <p style={{ fontSize:13, color:T.sub, textAlign:"center", lineHeight:1.7, margin:"0 0 40px" }}>{body}</p>
+      <p style={{ ...JUSTIFICADO, textAlignLast:"center", fontSize:13, color:T.sub, lineHeight:1.7, margin:"0 0 40px" }}>{body}</p>
       <PressBtn onClick={() => isLast ? onDone() : setSlide(s => s+1)}
         style={{ width:"100%", padding:"14px 0", borderRadius:16, background:T.accent, border:"none",
           fontSize:14, fontWeight:700, color:"#0f172a", cursor:"pointer", letterSpacing:.2 }}>
@@ -698,7 +703,9 @@ function HeaderCalendar({ state, setState, T, articulos }) {
             {cells.map((d, i) => {
               if (!d) return <div key={`_${i}`}/>;
               const k      = toKey(yr, mo, d);
-              const hasArt = !!articulos[k];
+              // Solo se habilitan días con artículo cuya fecha ya llegó. Los días
+              // futuros se revisan en el modo revisión, no en la app del estudiante.
+              const hasArt = !!articulos[k] && k <= hoyKey();
               const isSel  = state.selectedKey === k;
               const isTdy  = k === hoyKey();
               const isRead = (state.read || []).includes(k);
@@ -750,7 +757,7 @@ function ReadMode({ art, onClose, T }) {
       </div>
       <div style={{ flex:1, overflowY:"auto", padding:"20px 20px 32px", scrollbarWidth:"none" }}>
         <h1 style={{ fontSize:20, fontWeight:700, color:T.text, lineHeight:1.3, margin:"0 0 16px" }}>{art.title}</h1>
-        <p style={{ fontSize:14, color:T.sub, lineHeight:1.75, marginBottom:20 }}>{art.description}</p>
+        <p style={{ ...TEXTO_LARGO, fontSize:14, color:T.sub, lineHeight:1.75, marginBottom:20 }}>{art.description}</p>
         {[
           { label:"Contexto técnico",  text:art.context },
           { label:"En detalle",        text:art.detail  },
@@ -761,7 +768,7 @@ function ReadMode({ art, onClose, T }) {
           <div key={label} style={{ marginBottom:20 }}>
             <p style={{ fontSize:11, fontWeight:700, color:T.accent, letterSpacing:1,
               marginBottom:6, textTransform:"uppercase" }}>{label}</p>
-            <p style={{ fontSize:14, color:T.sub, lineHeight:1.75, margin:0 }}>{text}</p>
+            <p style={{ ...TEXTO_LARGO, fontSize:14, color:T.sub, lineHeight:1.75, margin:0 }}>{text}</p>
           </div>
         ))}
         <div style={{ marginTop:24, paddingTop:16, borderTop:`1px solid ${T.border}` }}>
@@ -885,7 +892,7 @@ function TodayView({ state, setState, T, showToast, scrollRef, articulos }) {
                 {art.shortCategory}
               </span>
             </div>
-            <p style={{ fontSize:12, color:T.sub, lineHeight:1.7, marginBottom:12 }}>{art.description}</p>
+            <p style={{ ...TEXTO_LARGO, fontSize:12, color:T.sub, lineHeight:1.7, marginBottom:12 }}>{art.description}</p>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <div style={{ display:"flex", gap:7 }}>
                 <IBtn active={liked}    label="Me gusta"    T={T} onClick={() => setState(s => applyReaction(s,key,"like"))}><Ic.ThumbUp/></IBtn>
@@ -1166,7 +1173,7 @@ function ProfileView({ state, setState, T, showToast, articulos }) {
 
       {/* Reporte del piloto */}
       <Card T={T} title="Reporte del piloto" icon={<Ic.Star/>}>
-        <p style={{ fontSize:11, color:T.muted, lineHeight:1.6, marginBottom:10 }}>
+        <p style={{ ...JUSTIFICADO, fontSize:11, color:T.muted, lineHeight:1.6, marginBottom:10 }}>
           Copia este código y entrégalo al cierre de cada semana. Resume tu uso
           y no contiene datos personales.
         </p>
@@ -1220,7 +1227,7 @@ function ProfileView({ state, setState, T, showToast, articulos }) {
           </div>
         )}
         <div style={{ background:`${T.accent}08`, border:`1px solid ${T.accent}25`, borderRadius:12, padding:"9px 13px" }}>
-          <p style={{ fontSize:11, color:T.muted, margin:0, lineHeight:1.5 }}>
+          <p style={{ ...JUSTIFICADO, fontSize:11, color:T.muted, margin:0, lineHeight:1.5 }}>
             Las notificaciones se activarán cuando la app esté disponible como PWA instalada.
           </p>
         </div>
@@ -1379,7 +1386,7 @@ function Campo({ valor, editable, onCambio, estilo, unaLinea }) {
 function VistaArticulo({ art, fecha, editable, onCampo }) {
   const Illu = HERO_MAP[art.shortCategory] ?? null;
   const col  = colorDe(art.shortCategory);
-  const parrafo = { fontSize:12.5, lineHeight:1.75, color:"#cbd5e1", margin:0 };
+  const parrafo = { ...TEXTO_LARGO, fontSize:12.5, lineHeight:1.75, color:"#cbd5e1", margin:0 };
   const rotulo  = { margin:"0 0 5px", fontSize:10, fontWeight:700, letterSpacing:1,
                     textTransform:"uppercase", color:col };
   return (
@@ -1614,7 +1621,7 @@ function RevisionView({ onSalir }) {
             </div>
 
             {editando ? (
-              <p style={{ margin:"0 0 16px", fontSize:12, lineHeight:1.7, color:R.suave }}>
+              <p style={{ ...JUSTIFICADO, margin:"0 0 16px", fontSize:12, lineHeight:1.7, color:R.suave }}>
                 Escribe directamente sobre el artículo. Los cambios se guardan solos y
                 son los que se publican. No pasan por el generador.
               </p>
