@@ -119,11 +119,14 @@ const CATEGORIES = ORDEN_CATEGORIAS.map(key => ({ key }));
 // El código nunca contiene artículos: solo sabe cómo pedirlos.
 // ═══════════════════════════════════════════════════
 const ESQUEMA_VERSION = 1;
-const CAMPOS = ["shortCategory","title","description","context",
-                "detail","ai","history","keyConcepts","sources","readingMin"];
+// Un artículo no necesita las siete secciones. Cuando la ficha no da
+// material para una opcional, omitirla es la conducta correcta.
+const CAMPOS_OBLIGATORIOS = ["shortCategory","title","description",
+                             "detail","keyConcepts","sources","readingMin"];
+const CAMPOS_OPCIONALES   = ["context","ai","history"];
 
 function validarArticulo(fecha, art) {
-  const faltan = CAMPOS.filter(c => art[c] === undefined || art[c] === "" ||
+  const faltan = CAMPOS_OBLIGATORIOS.filter(c => art[c] === undefined || art[c] === "" ||
                                     (Array.isArray(art[c]) && !art[c].length));
   if (faltan.length)                      return `${fecha}: faltan campos (${faltan.join(", ")})`;
   if (!CATEGORIAS[art.shortCategory])     return `${fecha}: categoría desconocida "${art.shortCategory}"`;
@@ -754,7 +757,7 @@ function ReadMode({ art, onClose, T }) {
           { label:"Aplicación con IA", text:art.ai      },
           { label:"Historia técnica",  text:art.history },
           { label:"Conceptos clave",   text:art.keyConcepts },
-        ].map(({label,text}) => (
+        ].filter(({text}) => text && String(text).trim()).map(({label,text}) => (
           <div key={label} style={{ marginBottom:20 }}>
             <p style={{ fontSize:11, fontWeight:700, color:T.accent, letterSpacing:1,
               marginBottom:6, textTransform:"uppercase" }}>{label}</p>
@@ -901,11 +904,11 @@ function TodayView({ state, setState, T, showToast, scrollRef, articulos }) {
 
         {/* Content sections */}
         <div style={{ borderRadius:20, border:`1px solid ${T.border}`, background:T.card, padding:"16px 16px 4px" }}>
-          <SectionBlock icon={<Ic.Info/>}   title="Contexto técnico"  T={T}>{art.context}</SectionBlock>
-          <SectionBlock icon={<Ic.Layers/>} title="En detalle"        T={T}>{art.detail}</SectionBlock>
-          <SectionBlock icon={<Ic.Cpu/>}    title="Aplicación con IA" T={T}>{art.ai}</SectionBlock>
-          <SectionBlock icon={<Ic.ClockH/>} title="Historia técnica"  T={T}>{art.history}</SectionBlock>
-          <SectionBlock icon={<Ic.Star/>}   title="Conceptos clave"   T={T}>{art.keyConcepts}</SectionBlock>
+          {art.context     && <SectionBlock icon={<Ic.Info/>}   title="Contexto técnico"  T={T}>{art.context}</SectionBlock>}
+          {art.detail      && <SectionBlock icon={<Ic.Layers/>} title="En detalle"        T={T}>{art.detail}</SectionBlock>}
+          {art.ai          && <SectionBlock icon={<Ic.Cpu/>}    title="Aplicación con IA" T={T}>{art.ai}</SectionBlock>}
+          {art.history     && <SectionBlock icon={<Ic.ClockH/>} title="Historia técnica"  T={T}>{art.history}</SectionBlock>}
+          {art.keyConcepts && <SectionBlock icon={<Ic.Star/>}   title="Conceptos clave"   T={T}>{art.keyConcepts}</SectionBlock>}
           <div style={{ background:T.pill, border:`1px solid ${T.border}`, borderRadius:14, padding:"11px 13px", marginBottom:12 }}>
             <p style={{ fontSize:12, fontWeight:700, color:T.text, marginBottom:8 }}>Fuentes</p>
             {art.sources.map(src => (
@@ -1402,10 +1405,12 @@ function VistaArticulo({ art, fecha, editable, onCampo }) {
           <Campo valor={art.description} editable={editable}
             onCambio={v => onCampo("description", v)} estilo={parrafo}/>
         </div>
-        {SECCIONES.map(([campo, titulo]) => (
+        {SECCIONES.filter(([campo]) => editable || art[campo]).map(([campo, titulo]) => (
           <div key={campo} style={{ marginBottom:15 }}>
-            <p style={rotulo}>{titulo}</p>
-            <Campo valor={art[campo]} editable={editable}
+            <p style={rotulo}>{titulo}
+              {!art[campo] && <span style={{ color:R.tenue }}> · vacía</span>}
+            </p>
+            <Campo valor={art[campo] ?? ""} editable={editable}
               onCambio={v => onCampo(campo, v)} estilo={parrafo}/>
           </div>
         ))}
