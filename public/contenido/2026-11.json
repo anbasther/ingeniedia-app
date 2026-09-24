@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "mes": "2026-11",
+  "generado": "2026-09-24T15:15:17.000Z",
+  "articulos": {
+    "2026-11-02": {
+      "shortCategory": "Electricidad",
+      "title": "Cuándo y cómo instalar conductores en paralelo",
+      "description": "Unir varios conductores en ambos extremos para que funcionen como uno solo está permitido en líneas de potencia. Pero la norma lo condiciona a que el conjunto sea simétrico, porque de eso depende que la corriente se reparta por igual.",
+      "context": "Si una rama del paralelo tiene distinta impedancia que las demás, absorbe más corriente y se sobrecalienta. Por eso las exigencias no apuntan al conductor individual sino a que todas las ramas sean idénticas.",
+      "detail": "El Pliego Técnico RIC N° 04, en su punto 5.28, autoriza conductores en paralelo únicamente en líneas de potencia con sección igual o superior a 50 mm².\n\nLos puntos 5.28.1 al 5.28.4 fijan la simetría: todos los conductores del conjunto deben tener el mismo largo, la misma sección y el mismo tipo de aislación. Además deben usar el mismo tipo de terminal, con dimensiones idénticas y conectados al mismo punto. Para los terminales de alta compresión, el mismo pliego invoca en el punto 5.11.4 las normas UL 486A-486B e IEC 61238-1-1/2/3.\n\nLa disposición física también cuenta. El Anexo 3.1 del Pliego Técnico RIC N° 03 entrega configuraciones para reducir los desbalances de impedancia: esquemas para 4 cables de 3 núcleos, y para 6, 9 y 12 cables de un solo núcleo en plano liso, uno sobre otro o en trébol.\n\nPara la capacidad de transporte rigen los factores de corrección generales de la Tabla 4.6 del RIC N° 04. La norma no entrega un método específico cuando se combinan varias ternas en paralelo. Tampoco define si cada rama debe llevar protección individual: trata el conjunto como un conductor único, unido en sus extremos.",
+      "keyConcepts": "Un paralelo funciona como un solo conductor solo si sus ramas son idénticas en largo, sección, aislación y terminales. Cualquier diferencia hace que una rama cargue más corriente que las otras.",
+      "sources": [
+        "Pliego Técnico RIC N° 04 (Conductores y Canalizaciones)",
+        "Pliego Técnico RIC N° 03 (Alimentadores y Demanda)"
+      ],
+      "readingMin": 2
+    }
+  }
+}
