@@ -35,7 +35,7 @@ const hoyKey = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 };
-const APP_VERSION = "0.2.2";
+const APP_VERSION = "0.3.0";
 // Texto de lectura: justificado, con guiones automáticos en español para que
 // el justificado no deje espacios anchos en pantallas angostas. "pre-line"
 // respeta los saltos de párrafo que traen los artículos (\n\n).
@@ -1118,6 +1118,99 @@ function EditField({ value, onChange, T }) {
   );
 }
 
+// ═══════════════════════════════════════════════════
+// AVISO DIARIO (notificaciones push)
+// El estado real se lee del teléfono (permiso y suscripción), no se guarda
+// aparte: así el interruptor nunca muestra algo distinto de lo que pasa.
+// ═══════════════════════════════════════════════════
+function claveABytes(b64) {
+  const pad = "=".repeat((4 - b64.length % 4) % 4);
+  const raw = atob((b64 + pad).replace(/-/g, "+").replace(/_/g, "/"));
+  return Uint8Array.from(raw, c => c.charCodeAt(0));
+}
+
+async function registroSW() {
+  if (!("serviceWorker" in navigator)) return null;
+  return (await navigator.serviceWorker.getRegistration()) || null;
+}
+
+function AvisoDiario({ T, showToast }) {
+  // "cargando" | "no-soporta" | "bloqueado" | "activo" | "inactivo"
+  const [estado, setEstado] = useState("cargando");
+  const [ocupado, setOcupado] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const soporta = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+      const reg = soporta ? await registroSW() : null;
+      if (!reg) return setEstado("no-soporta");
+      if (Notification.permission === "denied") return setEstado("bloqueado");
+      const sub = await reg.pushManager.getSubscription();
+      setEstado(sub ? "activo" : "inactivo");
+    })().catch(() => setEstado("no-soporta"));
+  }, []);
+
+  async function activar() {
+    setOcupado(true);
+    try {
+      const permiso = await Notification.requestPermission();
+      if (permiso !== "granted") { setEstado(permiso === "denied" ? "bloqueado" : "inactivo"); return; }
+      const reg = await registroSW();
+      const { clave } = await (await fetch("/api/clave")).json();
+      if (!clave) throw new Error("sin clave");
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: claveABytes(clave) });
+      const r = await fetch("/api/suscripciones", { method:"POST",
+        headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ suscripcion: sub.toJSON() }) });
+      if (!r.ok) { await sub.unsubscribe(); throw new Error("servidor"); }
+      setEstado("activo"); showToast("Aviso diario activado");
+    } catch {
+      showToast("No se pudo activar el aviso. Intenta de nuevo más tarde.");
+    } finally { setOcupado(false); }
+  }
+
+  async function desactivar() {
+    setOcupado(true);
+    try {
+      const reg = await registroSW();
+      const sub = reg && await reg.pushManager.getSubscription();
+      if (sub) {
+        await fetch("/api/suscripciones", { method:"DELETE",
+          headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ endpoint: sub.endpoint }) }).catch(() => {});
+        await sub.unsubscribe();
+      }
+      setEstado("inactivo"); showToast("Aviso diario desactivado");
+    } finally { setOcupado(false); }
+  }
+
+  const mensaje = {
+    "cargando":   "Revisando el estado del aviso…",
+    "no-soporta": "Para recibir el aviso diario, instala la app en tu teléfono Android desde Chrome (menú ⋮ → Instalar app).",
+    "bloqueado":  "Las notificaciones están bloqueadas para IngenieDía. Actívalas en los ajustes del teléfono (Ajustes → Apps → IngenieDía → Notificaciones) y vuelve aquí.",
+    "activo":     "Recibirás un aviso cada mañana, alrededor de las 8:00, los días que haya artículo nuevo.",
+    "inactivo":   "Activa el aviso para que te llegue el artículo del día cada mañana, alrededor de las 8:00.",
+  }[estado];
+
+  return (
+    <Card T={T} title="Notificaciones" icon={<Ic.Bell/>}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center",
+        background:T.pill, border:`1px solid ${T.border}`, borderRadius:12, padding:"11px 13px", marginBottom:8,
+        opacity: (estado === "activo" || estado === "inactivo") ? 1 : 0.55 }}>
+        <span style={{ fontSize:12, color:T.sub }}>Aviso diario</span>
+        <Toggle on={estado === "activo"} T={T}
+          onChange={v => {
+            if (ocupado || !(estado === "activo" || estado === "inactivo")) return;
+            v ? activar() : desactivar();
+          }}/>
+      </div>
+      <div style={{ background:`${T.accent}08`, border:`1px solid ${T.accent}25`, borderRadius:12, padding:"9px 13px" }}>
+        <p style={{ ...JUSTIFICADO, fontSize:11, color:T.muted, margin:0, lineHeight:1.5 }}>
+          {ocupado ? "Un momento…" : mensaje}
+        </p>
+      </div>
+    </Card>
+  );
+}
+
 function ProfileView({ state, setState, T, showToast, articulos }) {
   const favCat = useMemo(() => {
     const counts = {};
@@ -1211,27 +1304,7 @@ function ProfileView({ state, setState, T, showToast, articulos }) {
       </Card>
 
       {/* Notifications */}
-      <Card T={T} title="Notificaciones" icon={<Ic.Bell/>}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center",
-          background:T.pill, border:`1px solid ${T.border}`, borderRadius:12, padding:"11px 13px", marginBottom:8 }}>
-          <span style={{ fontSize:12, color:T.sub }}>Notificación diaria</span>
-          <Toggle on={state.notificationsOn} T={T} onChange={v => setState(s=>({...s,notificationsOn:v}))}/>
-        </div>
-        {state.notificationsOn && (
-          <div style={{ background:T.pill, border:`1px solid ${T.border}`, borderRadius:12, padding:"11px 13px", marginBottom:8 }}>
-            <span style={{ fontSize:11, color:T.muted, display:"block", marginBottom:6 }}>Hora de notificación</span>
-            <input type="time" value={state.notifTime}
-              onChange={e => setState(s=>({...s,notifTime:e.target.value}))}
-              style={{ width:"100%", background:T.inputBg, border:`1px solid ${T.border}`,
-                borderRadius:9, padding:"7px 11px", color:T.text, fontSize:12, outline:"none" }}/>
-          </div>
-        )}
-        <div style={{ background:`${T.accent}08`, border:`1px solid ${T.accent}25`, borderRadius:12, padding:"9px 13px" }}>
-          <p style={{ ...JUSTIFICADO, fontSize:11, color:T.muted, margin:0, lineHeight:1.5 }}>
-            Las notificaciones se activarán cuando la app esté disponible como PWA instalada.
-          </p>
-        </div>
-      </Card>
+      <AvisoDiario T={T} showToast={showToast}/>
 
       {/* Font */}
       <Card T={T} title="Tamaño de texto">
