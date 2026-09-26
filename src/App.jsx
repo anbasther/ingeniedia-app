@@ -35,7 +35,10 @@ const hoyKey = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 };
-const APP_VERSION = "0.3.1";
+const APP_VERSION = "0.3.2";
+
+// Aviso que acompaña a cada artículo. El texto completo está en /terminos.
+const AVISO_REFERENCIAL = "Guía referencial de carácter educativo. No reemplaza la normativa oficial vigente ni el criterio de un profesional habilitado. Ante cualquier diferencia, prevalece la norma oficial.";
 // Texto de lectura: justificado, con guiones automáticos en español para que
 // el justificado no deje espacios anchos en pantallas angostas. "pre-line"
 // respeta los saltos de párrafo que traen los artículos (\n\n).
@@ -548,7 +551,7 @@ function SectionBlock({ icon, title, children, T }) {
         </span>
         <span style={{ fontSize:13, fontWeight:600, color:T.text }}>{title}</span>
       </div>
-      <p style={{ ...JUSTIFICADO, fontSize:12, color:T.sub, lineHeight:1.7, margin:0 }}>{children}</p>
+      <p style={{ ...TEXTO_LARGO, fontSize:12, color:T.sub, lineHeight:1.7, margin:0 }}>{children}</p>
     </div>
   );
 }
@@ -599,6 +602,19 @@ function Skeleton({ T }) {
 }
 
 // ═══════════════════════════════════════════════════
+// AVISO REFERENCIAL (al pie de cada artículo)
+// ═══════════════════════════════════════════════════
+function AvisoReferencial({ T }) {
+  return (
+    <p style={{ ...JUSTIFICADO, fontSize:10.5, color:T.muted, lineHeight:1.55, margin:"0 0 14px" }}>
+      {AVISO_REFERENCIAL}{" "}
+      <a href="/terminos" target="_blank" rel="noopener"
+        style={{ color:T.muted, textDecoration:"underline" }}>Términos de uso</a>
+    </p>
+  );
+}
+
+// ═══════════════════════════════════════════════════
 // ONBOARDING
 // ═══════════════════════════════════════════════════
 const SLIDES = [
@@ -632,6 +648,15 @@ function Onboarding({ onDone, T }) {
           fontSize:14, fontWeight:700, color:"#0f172a", cursor:"pointer", letterSpacing:.2 }}>
         {cta}
       </PressBtn>
+      {isLast && (
+        <p style={{ ...JUSTIFICADO, textAlignLast:"center", marginTop:16, fontSize:11, color:T.muted, lineHeight:1.55 }}>
+          IngenieDía es una guía referencial y no reemplaza la normativa oficial.
+          Al comenzar aceptas los{" "}
+          <a href="/terminos" target="_blank" rel="noopener" style={{ color:T.muted, textDecoration:"underline" }}>Términos de uso</a>
+          {" "}y la{" "}
+          <a href="/privacidad" target="_blank" rel="noopener" style={{ color:T.muted, textDecoration:"underline" }}>Política de privacidad</a>.
+        </p>
+      )}
       {!isLast && (
         <button onClick={onDone}
           style={{ marginTop:14, background:"none", border:"none", fontSize:12, color:T.muted, cursor:"pointer" }}>
@@ -775,6 +800,7 @@ function ReadMode({ art, onClose, T }) {
           <p style={{ fontSize:11, fontWeight:700, color:T.muted, marginBottom:8,
             textTransform:"uppercase", letterSpacing:1 }}>Fuentes</p>
           {art.sources.map(s => <p key={s} style={{ fontSize:12, color:T.muted, margin:"0 0 4px" }}>· {s}</p>)}
+          <div style={{ marginTop:14 }}><AvisoReferencial T={T}/></div>
         </div>
       </div>
     </div>
@@ -925,6 +951,7 @@ function TodayView({ state, setState, T, showToast, scrollRef, articulos }) {
               </div>
             ))}
           </div>
+          <AvisoReferencial T={T}/>
         </div>
       </div>
     </>
@@ -1352,6 +1379,9 @@ function ProfileView({ state, setState, T, showToast, articulos }) {
       <p style={{ textAlign:"center", fontSize:11, color:T.muted, margin:"18px 0 6px" }}>
         <a href="/privacidad" target="_blank" rel="noopener"
           style={{ color:T.muted, textDecoration:"underline" }}>Política de privacidad</a>
+        {"  ·  "}
+        <a href="/terminos" target="_blank" rel="noopener"
+          style={{ color:T.muted, textDecoration:"underline" }}>Términos de uso</a>
         {"  ·  "}v{APP_VERSION}
       </p>
     </div>
@@ -1516,6 +1546,9 @@ function VistaArticulo({ art, fecha, editable, onCampo }) {
               una fuente por línea
             </p>
           )}
+          <p style={{ ...JUSTIFICADO, margin:"12px 0 0", fontSize:10.5, lineHeight:1.55, color:"#64748b" }}>
+            {AVISO_REFERENCIAL}
+          </p>
         </div>
       </div>
     </div>
