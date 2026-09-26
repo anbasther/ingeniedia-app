@@ -35,7 +35,8 @@ const hoyKey = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 };
-const APP_VERSION = "0.3.2";
+const APP_VERSION = "0.4.0";
+const CORREO_CONTACTO = "anbasther@gmail.com";
 
 // Aviso que acompaña a cada artículo. El texto completo está en /terminos.
 const AVISO_REFERENCIAL = "Guía referencial de carácter educativo. No reemplaza la normativa oficial vigente ni el criterio de un profesional habilitado. Ante cualquier diferencia, prevalece la norma oficial.";
@@ -155,19 +156,22 @@ function normalizarMes(json) {
 
 const mesDe = (fechaKey) => fechaKey.slice(0, 7);
 
+// Un mes sin archivo publicado no tiene artículos. La muestra de ejemplo solo
+// se usa al desarrollar en el computador, nunca en la app publicada.
 async function cargarMes(mes) {
+  const vacio = { articulos:{}, errores:[] };
   try {
     const r = await fetch(`/contenido/${mes}.json`, { cache:"no-cache" });
+    if (r.status === 404) return vacio;
     if (!r.ok) throw new Error(r.status);
     return normalizarMes(await r.json());
   } catch {
-    // Sin servidor de contenido (vista previa): se usa la muestra incluida.
-    return normalizarMes({ articulos: CONTENIDO_DEMO });
+    return import.meta.env.DEV ? normalizarMes({ articulos: CONTENIDO_DEMO }) : vacio;
   }
 }
 
 const DEFAULT_STATE = {
-  tab:"today", selectedKey:hoyKey(), theme:"dark", fontScale:1,
+  tab:"today", selectedKey:hoyKey(), theme:"light", fontScale:1,
   liked:[], disliked:[], saved:[], read:[],
   notificationsOn:true, notifTime:"08:00",
   userName:"", userEmail:"",
@@ -425,6 +429,7 @@ const CatIcon = {
   Electricidad:   ({c,s=16}) => <svg {...SB} style={{width:s,height:s}} stroke={c}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
   Energía:        ({c,s=16}) => <svg {...SB} style={{width:s,height:s}} stroke={c}><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
   IA:             ({c,s=16}) => <svg {...SB} style={{width:s,height:s}} stroke={c}><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>,
+  Electrónica:    ({c,s=16}) => <svg {...SB} style={{width:s,height:s}} stroke={c}><polyline points="1 12 5 12 7 7 10 17 13 7 16 17 18 12 23 12"/></svg>,
   Informática:    ({c,s=16}) => <svg {...SB} style={{width:s,height:s}} stroke={c}><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>,
   Mecánica:       ({c,s=16}) => <svg {...SB} style={{width:s,height:s}} stroke={c}><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>,
   Automatización: ({c,s=16}) => <svg {...SB} style={{width:s,height:s}} stroke={c}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
@@ -670,7 +675,7 @@ function Onboarding({ onDone, T }) {
 // ═══════════════════════════════════════════════════
 // HEADER CALENDAR
 // ═══════════════════════════════════════════════════
-function HeaderCalendar({ state, setState, T, articulos }) {
+function HeaderCalendar({ state, setState, T, articulos, onVerMes }) {
   const init = getMonthYear(state.selectedKey);
   const [open, setOpen] = useState(false);
   const [yr,   setYr]   = useState(init.yr);
@@ -692,6 +697,9 @@ function HeaderCalendar({ state, setState, T, articulos }) {
       document.removeEventListener("touchstart", fn);
     };
   }, [open]);
+
+  // Al navegar a otro mes, se pide su archivo (solo meses pasados o el actual).
+  useEffect(() => { onVerMes?.(`${yr}-${String(mo+1).padStart(2,"0")}`); }, [yr, mo]);
 
   const firstDay  = new Date(yr, mo, 1);
   const totalDays = new Date(yr, mo+1, 0).getDate();
@@ -966,7 +974,7 @@ function ArchiveView({ state, setState, T, articulos }) {
 
   const savedArts = useMemo(
     () => state.saved.map(k => ({ k, art:articulos[k] })).filter(x => x.art),
-    [state.saved]
+    [state.saved, articulos]
   );
   const byCat = useMemo(
     () => CATEGORIES.map(cat => ({ ...cat, items: savedArts.filter(({art}) => art.shortCategory===cat.key) })),
@@ -1165,6 +1173,7 @@ function AvisoDiario({ T, showToast }) {
   // "cargando" | "no-soporta" | "bloqueado" | "activo" | "inactivo"
   const [estado, setEstado] = useState("cargando");
   const [ocupado, setOcupado] = useState(false);
+  const [error, setError]     = useState("");
 
   useEffect(() => {
     (async () => {
@@ -1177,21 +1186,42 @@ function AvisoDiario({ T, showToast }) {
     })().catch(() => setEstado("no-soporta"));
   }, []);
 
+  // Cada paso tiene su propio mensaje de error, para saber qué revisar.
   async function activar() {
-    setOcupado(true);
+    setOcupado(true); setError("");
+    let paso = "permiso";
     try {
       const permiso = await Notification.requestPermission();
       if (permiso !== "granted") { setEstado(permiso === "denied" ? "bloqueado" : "inactivo"); return; }
+
+      paso = "clave";
       const reg = await registroSW();
-      const { clave } = await (await fetch("/api/clave")).json();
-      if (!clave) throw new Error("sin clave");
+      const rc = await fetch("/api/clave");
+      const { clave, error:errClave } = await rc.json().catch(() => ({}));
+      if (!clave) throw new Error(errClave || `el servidor respondió ${rc.status}`);
+
+      paso = "suscripcion";
       const sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: claveABytes(clave) });
+
+      paso = "guardar";
       const r = await fetch("/api/suscripciones", { method:"POST",
         headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ suscripcion: sub.toJSON() }) });
-      if (!r.ok) { await sub.unsubscribe(); throw new Error("servidor"); }
+      if (!r.ok) {
+        const { error:errSrv } = await r.json().catch(() => ({}));
+        await sub.unsubscribe();
+        throw new Error(errSrv || `el servidor respondió ${r.status}`);
+      }
       setEstado("activo"); showToast("Aviso diario activado");
-    } catch {
-      showToast("No se pudo activar el aviso. Intenta de nuevo más tarde.");
+    } catch (e) {
+      const detalle = e && e.message ? ` (${e.message})` : "";
+      const sinRed = !navigator.onLine;
+      setError(sinRed ? "No hay conexión a internet. Conéctate y vuelve a intentarlo." : {
+        permiso:     "El teléfono no pudo pedir el permiso de notificaciones." + detalle,
+        clave:       "No se pudo obtener la clave de avisos del servidor. Revisa en Vercel la variable VAPID_PUBLIC_KEY." + detalle,
+        suscripcion: "El teléfono rechazó la suscripción. Suele deberse a una clave VAPID_PUBLIC_KEY incompleta o cambiada en Vercel." + detalle,
+        guardar:     "El teléfono se suscribió, pero el servidor no pudo guardarlo. Revisa en Vercel la conexión con la base de datos." + detalle,
+      }[paso]);
+      showToast("No se pudo activar el aviso");
     } finally { setOcupado(false); }
   }
 
@@ -1233,6 +1263,11 @@ function AvisoDiario({ T, showToast }) {
         <p style={{ ...JUSTIFICADO, fontSize:11, color:T.muted, margin:0, lineHeight:1.5 }}>
           {ocupado ? "Un momento…" : mensaje}
         </p>
+        {error && !ocupado && (
+          <p style={{ ...JUSTIFICADO, fontSize:11, color:T.danger, margin:"8px 0 0", lineHeight:1.5 }}>
+            {error} Si el problema sigue, escribe a {CORREO_CONTACTO}.
+          </p>
+        )}
       </div>
     </Card>
   );
@@ -1319,24 +1354,16 @@ function ProfileView({ state, setState, T, showToast, articulos }) {
         </PressBtn>
       </Card>
 
-      {/* Account */}
-      <Card T={T} title="Cuenta" icon={<Ic.User/>}>
-        <div style={{ background:T.pill, border:`1px solid ${T.border}`, borderRadius:12, padding:"11px 13px" }}>
-          <EditField value={state.userName} onChange={v => setState(s=>({...s,userName:v}))} T={T}/>
-          <div style={{ height:1, background:T.border, margin:"8px 0" }}/>
-          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-            <Ic.Mail/> <span style={{ fontSize:11, color:T.muted }}>{state.userEmail || "Sin correo registrado"}</span>
-          </div>
-        </div>
-      </Card>
-
       {/* Notifications */}
       <AvisoDiario T={T} showToast={showToast}/>
 
       {/* Font */}
       <Card T={T} title="Tamaño de texto">
         <div style={{ background:T.pill, border:`1px solid ${T.border}`, borderRadius:12, padding:"11px 13px" }}>
-          <input type="range" min="0.85" max="1.2" step="0.05" value={state.fontScale}
+          <p style={{ ...JUSTIFICADO, fontSize:11, color:T.muted, margin:"0 0 8px", lineHeight:1.5 }}>
+            Ajusta el tamaño del texto de toda la app. El cambio se ve al instante.
+          </p>
+          <input type="range" min="0.85" max="1.3" step="0.05" value={state.fontScale || 1}
             onChange={e => setState(s=>({...s,fontScale:parseFloat(e.target.value)}))}
             style={{ width:"100%", accentColor:T.accent }}/>
           <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, color:T.muted, marginTop:4 }}>
@@ -1920,21 +1947,41 @@ export default function App() {
   const toast                = useToast();
   const T                    = THEMES[state.theme] ?? THEMES.dark;
 
-  // El mes se deduce de la fecha elegida: cambiar de mes carga otro archivo.
-  const mesActual = mesDe(state.selectedKey || hoyKey());
-  useEffect(() => {
-    let vigente = true;
-    cargarMes(mesActual).then(({ articulos:arts, errores }) => {
-      if (!vigente) return;
+  // Carga de meses. Se pide cada mes una sola vez y nunca un mes futuro:
+  // lo que aún no se publica para el estudiante no llega al teléfono desde la app.
+  const mesesCargados = useRef(new Set());
+  const verMes = useCallback(mes => {
+    if (mes > mesDe(hoyKey()) || mesesCargados.current.has(mes)) return;
+    mesesCargados.current.add(mes);
+    cargarMes(mes).then(({ articulos:arts, errores }) => {
       setArticulos(prev => ({ ...prev, ...arts }));
-      setAvisos(errores);
+      if (errores.length) setAvisos(prev => [...prev, ...errores]);
     });
-    return () => { vigente = false; };
-  }, [mesActual]);
+  }, []);
+
+  // El mes de la fecha elegida.
+  const mesActual = mesDe(state.selectedKey || hoyKey());
+  useEffect(() => { verMes(mesActual); }, [mesActual, verMes]);
+
+  // Los meses de lo guardado y leído, para que el Archivo los muestre.
+  useEffect(() => {
+    if (!ready) return;
+    new Set([...(state.saved||[]), ...(state.read||[])].map(mesDe)).forEach(verMes);
+  }, [ready, state.saved, state.read, verMes]);
 
   useEffect(() => {
     storeHydrate(DEFAULT_STATE).then(s => { setStateRaw({ ...s, selectedKey: hoyKey() }); setReady(true); });
   }, []);
+
+  // Fondo de la página y barra del teléfono con el color del tema,
+  // para que no quede un marco de otro color alrededor de la app.
+  useEffect(() => {
+    const fondo = esMovil ? T.bg : T.wallBg;
+    document.documentElement.style.background = esMovil ? T.bg : "";
+    document.body.style.background = fondo;
+    document.body.style.margin = "0";
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", T.bg);
+  }, [T, esMovil]);
 
   const setState = useCallback(fn => {
     setStateRaw(prev => {
@@ -1983,8 +2030,7 @@ export default function App() {
         borderRadius: esMovil ? 0 : 36,
         border:       esMovil ? "none" : `1.5px solid ${T.border}`,
         height:       esMovil ? "100dvh" : "min(780px, calc(100vh - 100px))",
-        overflow:"hidden", display:"flex", flexDirection:"column",
-        fontSize:`${state.fontScale}rem`, position:"relative" }}>
+        overflow:"hidden", display:"flex", flexDirection:"column", position:"relative" }}>
 
         {/* Onboarding */}
         {ready && !state.onboardingDone &&
@@ -2019,7 +2065,7 @@ export default function App() {
             <div>
               <div style={{ fontSize:19, fontWeight:700, color:T.text, letterSpacing:.2 }}>IngenieDía</div>
               <div style={{ fontSize:10, color:T.muted }}>Tu dosis diaria de ingeniería</div>
-              <HeaderCalendar state={state} setState={setState} T={T} articulos={articulos}/>
+              <HeaderCalendar state={state} setState={setState} T={T} articulos={articulos} onVerMes={verMes}/>
             </div>
             <div style={{ width:40, height:40, borderRadius:13, flexShrink:0,
               border:`1px solid ${T.accent}44`, background:`${T.accent}10`,
@@ -2031,6 +2077,7 @@ export default function App() {
 
         {/* Scroll area */}
         <div ref={scrollRef} style={{ flex:1, overflowY:"auto", overflowX:"hidden",
+          zoom: state.fontScale || 1,
           padding:"12px 12px 16px", scrollbarWidth:"none", msOverflowStyle:"none" }}>
           {ready ? renderView() : <Skeleton T={T}/>}
         </div>
