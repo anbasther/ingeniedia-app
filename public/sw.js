@@ -2,7 +2,7 @@
 // Guarda la app en el teléfono para que abra sin conexión, pero siempre
 // intenta primero la red: así cada artículo nuevo y cada versión nueva de la
 // app llegan en cuanto hay internet. Al cambiar la app, subir VERSION.
-const VERSION = "v2";
+const VERSION = "v3";
 const CACHE = `ingeniedia-${VERSION}`;
 const BASE = ["/", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
 
@@ -44,7 +44,11 @@ self.addEventListener("fetch", e => {
   const req = e.request;
   const url = new URL(req.url);
   if (req.method !== "GET" || url.origin !== location.origin) return;
-  if (req.mode === "navigate")            return e.respondWith(redPrimero(req, "/"));
+  // Navegación: cada página se guarda con su propia dirección (la app en "/",
+  // la política en "/privacidad"). Sin conexión, si no está guardada, abre la app.
+  if (req.mode === "navigate") return e.respondWith(
+    redPrimero(req).then(r => r.type === "error" ? caches.match("/").then(a => a || r) : r)
+  );
   if (url.pathname.startsWith("/assets/")) return e.respondWith(guardadoPrimero(req));
   e.respondWith(redPrimero(req));
 });

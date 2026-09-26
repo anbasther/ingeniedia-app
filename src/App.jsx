@@ -35,7 +35,7 @@ const hoyKey = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 };
-const APP_VERSION = "0.3.0";
+const APP_VERSION = "0.3.1";
 // Texto de lectura: justificado, con guiones automáticos en español para que
 // el justificado no deje espacios anchos en pantallas angostas. "pre-line"
 // respeta los saltos de párrafo que traen los artículos (\n\n).
@@ -1348,6 +1348,12 @@ function ProfileView({ state, setState, T, showToast, articulos }) {
           </PressBtn>
         </div>
       </Card>
+
+      <p style={{ textAlign:"center", fontSize:11, color:T.muted, margin:"18px 0 6px" }}>
+        <a href="/privacidad" target="_blank" rel="noopener"
+          style={{ color:T.muted, textDecoration:"underline" }}>Política de privacidad</a>
+        {"  ·  "}v{APP_VERSION}
+      </p>
     </div>
   );
 }
