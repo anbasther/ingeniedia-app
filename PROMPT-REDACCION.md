@@ -2,27 +2,35 @@
 
 Convierte una ficha verificada en un artículo. Es el prompt que usará el script generador, y también sirve para probar a mano: pega el tema, la ficha y luego esto.
 
-**Estado: calibrado** el 10 de septiembre de 2026, con la ficha de conductores en paralelo (ruta B, cuaderno de pliegos SEC) contrastada con el correo de referencia del docente.
+**Estado: calibrado** el 10 de septiembre de 2026, con la ficha de conductores en paralelo (ruta B, cuaderno de pliegos SEC) contrastada con el correo de referencia del docente. **Generalizado a las siete áreas** el 27 de septiembre de 2026: se pasan el ÁREA y el TEMA junto con la ficha, que ahora se genera con `PROMPT-FICHAS.md`.
 
 ---
 
 ## El prompt
 
 ```
-Escribe un artículo técnico breve sobre el TEMA indicado, a partir
-ÚNICAMENTE de la ficha de referencia entregada. No agregues información
-de tu conocimiento general.
+Escribe un artículo técnico breve sobre el TEMA indicado, del ÁREA
+indicada, a partir ÚNICAMENTE de la ficha de referencia entregada.
+No agregues información de tu conocimiento general.
 
 LECTOR
-Estudiantes de ingeniería eléctrica de nivel técnico superior en Chile,
-y profesionales de terreno. Conocen la teoría base: no expliques qué es
-la impedancia ni qué es una fase. Sí explica lo que la norma exige y
-por qué lo exige.
+Estudiantes de educación superior técnico-profesional del ÁREA en Chile,
+y profesionales de terreno. Conocen la teoría base del área: no expliques
+los conceptos elementales. Sí explica lo que las fuentes exigen o
+recomiendan y por qué.
 
 REGISTRO
 Escribe como un colega que resume una consulta a su equipo, no como un
-manual. Directo, sin adornos. Español de Chile, terminología SEC.
-Prosa continua. Dos minutos de lectura en un teléfono.
+manual. Directo, sin adornos. Español de Chile, con la terminología que
+usan las fuentes del área. Prosa continua. Dos minutos de lectura en
+un teléfono.
+
+CARÁCTER DE CADA AFIRMACIÓN
+La ficha marca cada afirmación como [OBLIGATORIO], [RECOMENDADO] o
+[DESCRIPTIVO]. Respeta esa distinción en el texto: una recomendación
+no se presenta como exigencia, y una explicación técnica no se presenta
+como norma. Si la ficha no trae nada [OBLIGATORIO], el artículo es
+explicativo: no inventes un marco normativo.
 
 ALCANCE
 Trata solo el TEMA indicado. La ficha puede traer material que comparte
@@ -38,10 +46,11 @@ Si un valor no está en la ficha, no lo escribas ni lo estimes.
 Si la ficha declara ese dato como vacío, dilo en el artículo.
 
 CITAS
-Cita el pliego dentro del texto, junto a la exigencia que introduce,
-no solo al final. Usa el identificador exacto de la ficha.
-Puedes citar normas secundarias (UL, IEC, ANSI, NCh) solo si la ficha
-las registra y dice qué pliego las invoca.
+Cita la fuente dentro del texto, junto a la afirmación que introduce,
+no solo al final. Usa el identificador exacto de la ficha (pliego,
+norma, ley, manual, documento).
+Puedes citar referencias secundarias solo si la ficha las registra
+y dice qué documento las invoca.
 
 SECCIONES
 Entrega solo las secciones que tengan contenido real en la ficha.
@@ -102,9 +111,9 @@ Que las secciones sean opcionales obliga a tres ajustes:
 
 Y dos reglas para el script generador:
 
-**El tema viaja junto con la ficha.** La regla de alcance necesita saber cuál es el tema, así que el generador debe pasarlo explícitamente.
+**El tema y el área viajan junto con la ficha.** La regla de alcance necesita saber cuál es el tema, y el lector depende del área, así que ambos se pasan explícitamente.
 
-**Ficha sin exigencias, sin artículo.** Si la sección 1 de la ficha (exigencias por pliego) viene vacía, no se genera nada: el tema se marca para revisión. Suele indicar que NotebookLM leyó fuentes equivocadas, no que la norma no regule el tema.
+**Ficha vacía, sin artículo.** Si la sección 1 de la ficha (qué establecen las fuentes) viene vacía, no se genera nada: el tema se marca para revisión. Suele indicar que NotebookLM leyó fuentes equivocadas, no que el tema no esté tratado. Una ficha cuya sección 1 es solo [DESCRIPTIVO] sí sirve: da un artículo explicativo.
 
 ---
 

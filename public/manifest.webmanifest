@@ -1,7 +1,7 @@
 {
   "name": "IngenieDía",
   "short_name": "IngenieDía",
-  "description": "Un artículo técnico de ingeniería cada día.",
+  "description": "Tu dosis diaria de ingeniería.",
   "lang": "es-CL",
   "start_url": "/",
   "scope": "/",

@@ -35,7 +35,7 @@ const hoyKey = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 };
-const APP_VERSION = "0.4.0";
+const APP_VERSION = "0.4.1";
 const CORREO_CONTACTO = "anbasther@gmail.com";
 
 // Aviso que acompaña a cada artículo. El texto completo está en /terminos.
