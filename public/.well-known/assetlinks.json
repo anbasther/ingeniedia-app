@@ -1,0 +1,14 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "cl.ingeniedia.app",
+      "sha256_cert_fingerprints": [
+        "81:82:4E:9F:1E:73:1D:87:19:88:AB:56:46:1F:36:DA:82:C2:AE:C5:19:37:4B:8A:4B:D9:C7:ED:3A:9C:46:8D",
+        "6A:4D:45:6C:BF:01:4E:2B:2B:82:D8:52:A4:B6:35:A6:F3:E8:58:46:CF:84:59:35:AD:44:B7:E6:56:B4:27:93",
+        "DA:CD:DE:59:65:94:0D:C1:52:FC:64:57:E4:4C:5C:33:39:DE:24:D7:DD:BB:BF:11:F2:1B:69:A1:4D:A2:5A:F4"
+      ]
+    }
+  }
+]
