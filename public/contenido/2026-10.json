@@ -1,0 +1,179 @@
+{
+  "version": 1,
+  "mes": "2026-10",
+  "generado": "2026-10-04T12:00:00Z",
+  "articulos": {
+    "2026-10-05": {
+      "shortCategory": "Electricidad",
+      "title": "Cuándo y cómo instalar conductores en paralelo",
+      "description": "Unir varios conductores en ambos extremos para que funcionen como uno solo está permitido en líneas de potencia. Pero la norma lo condiciona a que el conjunto sea simétrico, porque de eso depende que la corriente se reparta por igual.",
+      "context": "Si una rama del paralelo tiene distinta impedancia que las demás, absorbe más corriente y se sobrecalienta. Por eso las exigencias no apuntan al conductor individual sino a que todas las ramas sean idénticas.",
+      "detail": "El *{Pliego Técnico RIC N° 04}, en su punto 5.28, autoriza conductores en paralelo únicamente en líneas de potencia con sección igual o superior a 50 mm².\n\nLos puntos 5.28.1 al 5.28.4 fijan la simetría: todos los conductores del conjunto deben tener el mismo largo, la misma sección y el mismo tipo de aislación. Además deben usar el mismo tipo de terminal, con dimensiones idénticas y conectados al mismo punto. Para los terminales de alta compresión, el mismo pliego invoca en el punto 5.11.4 las normas UL 486A-486B e IEC 61238-1-1/2/3.\n\nLa disposición física también cuenta. El Anexo 3.1 del *{Pliego Técnico RIC N° 03} entrega configuraciones para reducir los desbalances de impedancia: esquemas para 4 cables de 3 núcleos, y para 6, 9 y 12 cables de un solo núcleo en plano liso, uno sobre otro o en trébol.\n\nPara la capacidad de transporte rigen los factores de corrección generales de la Tabla 4.6 del *{RIC N° 04}. La norma no entrega un método específico cuando se combinan varias ternas en paralelo. Tampoco define si cada rama debe llevar protección individual: trata el conjunto como un conductor único, unido en sus extremos.",
+      "keyConcepts": "Un paralelo funciona como un solo conductor solo si sus ramas son idénticas en largo, sección, aislación y terminales. Cualquier diferencia hace que una rama cargue más corriente que las otras.",
+      "sources": [
+        "Pliego Técnico RIC N° 04 (Conductores y Canalizaciones)",
+        "Pliego Técnico RIC N° 03 (Alimentadores y Demanda)"
+      ],
+      "readingMin": 2
+    },
+    "2026-10-06": {
+      "shortCategory": "Mecánica",
+      "title": "Centro de gravedad, el punto donde actúa todo el peso",
+      "description": "Cualquier cuerpo se comporta como si todo su peso actuara en un solo punto. Saber dónde está explica por qué un objeto se equilibra o se vuelca, y se puede encontrar con una simple plomada.",
+      "detail": "*{Serway y Jewett} definen el centro de masa como «la posición promedio de la masa del sistema». Cuando la gravedad es la misma en todo el cuerpo, como ocurre con los objetos cotidianos, ese punto coincide con el centro de gravedad: el punto por donde actúa el peso total.\n\nPara varias piezas ubicadas sobre una línea, su posición se calcula así:\n\nx_{CM} = (m_{1} · x_{1} + m_{2} · x_{2} + …) / M\n\ndonde x_{CM} es la posición del centro de masa (m); m_{1}, m_{2}… son las masas de cada pieza (kg); x_{1}, x_{2}… son sus posiciones (m), y M es la masa total (kg). Es un promedio en el que cada posición cuenta según su masa.\n\nPor eso el punto se corre hacia donde hay más masa. En una barra uniforme queda justo en la mitad; si un extremo es más pesado, se desplaza hacia ese lado.\n\nConocerlo sirve en dinámica y en estática. En dinámica, la fuerza neta mueve el centro de masa como si fuera una sola partícula con toda la masa del cuerpo:\n\nF_{neta} = M · a_{CM}\n\ndonde F_{neta} es la fuerza externa neta (N), M es la masa total (kg) y a_{CM} es la aceleración del centro de masa (m/s^{2}). En estática, es el punto donde se aplica el peso del cuerpo para revisar si está en equilibrio o si se vuelca.\n\nPara encontrarlo en una pieza irregular, *{Serway} describe un método simple: se cuelga la pieza de un punto y se marca con una plomada la línea vertical. Luego se cuelga desde otro punto y se marca una segunda vertical. El centro de gravedad está donde se cruzan las dos líneas.",
+      "keyConcepts": "Todo el peso de un cuerpo actúa como si estuviera en un solo punto, que se corre hacia donde hay más masa. Ahí se aplica el peso en estática, la fuerza neta lo mueve como a una partícula, y se encuentra con dos verticales de plomada.",
+      "sources": [
+        "Serway y Jewett, Física para ciencias e ingeniería, vol. 1, 7.ª ed., cap. 9 (sec. 9.5-9.6) y cap. 12 (sec. 12.2)",
+        "Martín Bragado, Física General, cap. 8"
+      ],
+      "readingMin": 2
+    },
+    "2026-10-07": {
+      "shortCategory": "Automatización",
+      "title": "Inductivo, capacitivo o fotoeléctrico, cómo elegir un sensor de presencia",
+      "description": "Antes de actuar, una máquina necesita saber si una pieza llegó a su lugar. Para eso usa sensores de presencia, y el tipo correcto depende de qué hay que detectar y de si se puede tocar.",
+      "detail": "*{Durán y coautores} explican que los sensores de presencia sirven para «determinar la existencia de un objeto en un intervalo de distancia especificado». Funcionan porque el objeto, al acercarse, cambia algo en el sensor.\n\nLa opción más simple es el final de carrera: un interruptor que la pieza acciona al empujar una palanca. Marca el límite hasta donde puede llegar esa pieza. En un ejemplo de los mismos autores, un motor hace avanzar un tubo hasta que toca un final de carrera; ese contacto detiene el motor y da paso al cilindro neumático que corta.\n\nCuando no conviene tocar la pieza, se usan sensores sin contacto. La elección depende de qué hay que detectar:\n\n• Inductivo: solo detecta metales. Según *{Durán y coautores}, responde «frente a la presencia de objetos metálicos».\n• Capacitivo: detecta casi cualquier material, como plástico, vidrio o líquidos.\n• Fotoeléctrico: detecta el objeto cuando corta un haz de luz. *{Mandado y coautores} describen tres montajes: de barrera, con espejo y por reflexión en el propio objeto.\n\nAl conectarlos también hay que mirar el tipo de salida. Estos sensores se alimentan normalmente con 24 V de corriente continua y tres cables. *{Escaño y coautores} explican que una tarjeta de entradas tipo sourcing trabaja con sensores PNP; si el sensor es NPN, hay que agregar una resistencia externa llamada pull-up.\n\nUn dato que las fuentes no entregan es la distancia a la que detecta cada sensor. Ese valor se busca en su hoja técnica.",
+      "keyConcepts": "El final de carrera detecta por contacto. Sin contacto, el sensor se elige según el objeto: inductivo solo para metales, capacitivo para casi cualquier material y fotoeléctrico cuando el objeto corta un haz de luz.",
+      "sources": [
+        "Durán, Martínez, Gámiz, Domingo y Grau, Automatismos eléctricos e industriales (2011), U.D. 2, 3 y 6",
+        "Mandado, Marcos, Fernández y Armesto, Autómatas programables y sistemas de automatización, 2.ª ed. (2008), cap. 7",
+        "Escaño, García y Nuevo, Integración de sistemas de automatización industrial (2019), cap. 2"
+      ],
+      "readingMin": 2
+    },
+    "2026-10-08": {
+      "shortCategory": "Electrónica",
+      "title": "Del RTL al GDSII, cómo se diseña un chip",
+      "description": "Un chip de gran escala no se dibuja a mano. Pasa por un flujo de etapas que va de una descripción en lenguaje de hardware al archivo que se envía a la fábrica.",
+      "detail": "Un circuito integrado VLSI (sigla en inglés de integración a muy gran escala) reúne una cantidad enorme de transistores. Según los *{apuntes del curso}, a esa escala el diseño manual es inmanejable, por eso el trabajo se hace con herramientas de automatización llamadas EDA.\n\nEl flujo se divide en dos mitades.\n\nFront-end, la lógica. Se parte de la especificación y se describe el circuito en un lenguaje de hardware hasta el nivel RTL (transferencia entre registros), que indica qué datos pasan de un registro a otro en cada ciclo de reloj. Luego, la síntesis lógica convierte ese RTL en compuertas. La herramienta busca un equilibrio llamado PPA: potencia, rendimiento (velocidad) y área.\n\nBack-end, la geometría. El placement decide dónde va cada compuerta dentro del chip, y el routing traza las conexiones metálicas entre ellas. El resultado es el archivo GDSII, con las formas y capas que se envían a fabricación.\n\nAntes del envío, el diseño debe pasar tres revisiones:\n\n• DRC: respeta las reglas geométricas del proceso.\n• LVS: el dibujo final coincide con el circuito diseñado.\n• STA: las señales llegan a tiempo en todos los caminos.\n\nSi algo falla, se vuelve atrás: se mueven celdas, se agregan buffers o se cambia el RTL.\n\nEl mismo diseño puede terminar en dos destinos. Un ASIC es un chip hecho a medida: muy eficiente, pero con un costo inicial alto. Una FPGA es un chip reprogramable: más barato para empezar, pero menos eficiente en área y consumo.",
+      "keyConcepts": "El diseño de un chip va de la lógica (RTL y síntesis) a la geometría (placement, routing y GDSII), buscando el equilibrio entre potencia, velocidad y área. Nada se fabrica sin pasar DRC, LVS y STA.",
+      "sources": [
+        "Apuntes Introducción al diseño VLSI, doc. 3 (Microelectrónica, VLSI y lógica digital), sec. 4.7-5.9",
+        "Apuntes Introducción al diseño VLSI, doc. 6 (Del RTL al GDSII), sec. 5 y 7",
+        "Apuntes Introducción al diseño VLSI, doc. 1 (Fundamentos de tecnología de semiconductores)"
+      ],
+      "readingMin": 2
+    },
+    "2026-10-09": {
+      "shortCategory": "Informática",
+      "title": "Del bit al gigabyte, cómo cuenta un computador",
+      "description": "Todo lo que guarda un computador, desde un texto hasta una foto, se reduce a ceros y unos. Entender cómo se agrupan esos dígitos explica de dónde salen el byte, el kilobyte y el gigabyte.",
+      "detail": "*{Joyanes Aguilar} define el bit (de binary digit, dígito binario) como «la unidad de información más pequeña que puede tratar una computadora». Solo puede valer 0 o 1, porque dentro del computador la información se guarda como señales eléctricas de dos estados.\n\nOcho bits forman un byte. A partir de ahí, las unidades crecen en potencias de 2:\n\n1 KB = 2^{10} bytes = 1.024 bytes\n1 MB = 1.024 KB = 1.048.576 bytes\n1 GB = 1.024 MB = 1.073.741.824 bytes\n\nPor eso 1 KB no son exactamente mil bytes.\n\nPara escribir números con ceros y unos se usa el sistema binario, de base 2. Cada posición vale una potencia de 2 (1, 2, 4, 8, 16, 32…), contando desde la derecha, y el número es la suma de las posiciones que tienen un 1. *{Joyanes} muestra el caso del 54: con ocho bits se escribe 00110110, porque 32 + 16 + 4 + 2 = 54.\n\nLa cantidad de bits fija hasta dónde se puede contar. Con n bits se representan los enteros desde 0 hasta 2^{n} − 1, donde n es el número de bits. *{Joyanes} da el caso de 16 bits: de 0 a 65.535. Lo mismo vale para la memoria: una memoria de 64 KB tiene 64 × 1.024 = 65.536 posiciones, numeradas de 0 a 65.535.",
+      "keyConcepts": "El bit es un 0 o un 1, y ocho bits forman un byte. Las unidades mayores crecen de a 1.024 porque el computador cuenta en potencias de 2, y con n bits se puede contar desde 0 hasta 2^{n} − 1.",
+      "sources": [
+        "Joyanes Aguilar, Fundamentos de programación: algoritmos, estructura de datos y objetos, 4.ª ed. (2008), cap. 1 (págs. 10-20, Tabla 1.1)"
+      ],
+      "readingMin": 2
+    },
+    "2026-10-10": {
+      "shortCategory": "Energía",
+      "title": "kW no es lo mismo que kWh, la diferencia entre potencia y energía",
+      "description": "En una boleta, en un motor o en una batería aparecen kW y kWh, y es fácil confundirlos. Uno mide qué tan rápido se usa la energía y el otro cuánta se usó; distinguirlos es el primer paso para dimensionar cualquier instalación.",
+      "detail": "*{Barcón, Guerrero y Martínez} definen la potencia como «la razón de cambio de la energía con respecto al tiempo». Dicho simple: la potencia indica qué tan rápido se entrega o se consume energía. Se mide en watts (W), y *{Huggins} recuerda que 1 W equivale a 1 joule por segundo.\n\nLa energía es esa potencia acumulada en el tiempo:\n\nE = P · t\n\ndonde E es la energía (kWh), P es la potencia (kW) y t es el tiempo (h). Por eso la electricidad se cobra en kilowatt-hora: un kilowatt sostenido durante una hora.\n\nLa diferencia importa al diseñar. La guía de *{Flores} sobre sistemas de almacenamiento con baterías (BESS) lo muestra con un ejemplo: para alimentar una carga de 50 kW durante 2 horas se necesitan 50 kW × 2 h = 100 kWh. Los 50 kW definen el inversor, que debe entregar esa potencia; los 100 kWh definen el banco de baterías, que debe guardar esa energía.\n\nAdemás, una batería no se descarga por completo en cada ciclo. La guía trabaja con una profundidad de descarga del 80 %, así que la capacidad que hay que instalar sube a 100 kWh ÷ 0,8 = 125 kWh.\n\nLa próxima vez que veas una placa o una boleta: los kW dicen qué tan fuerte trabaja un equipo; los kWh, cuánto trabajó.",
+      "keyConcepts": "La potencia (kW) mide qué tan rápido se usa la energía; la energía (kWh) es esa potencia por el tiempo, E = P · t. En una batería, los kW definen el inversor y los kWh, el tamaño del banco.",
+      "sources": [
+        "Barcón, Guerrero y Martínez, Calidad de la energía: factor de potencia y filtrado de armónicas (2012), cap. 1 (pág. 11) y cap. 2 (pág. 47)",
+        "Huggins, Energy Storage, 2.ª ed. (2016), cap. 9",
+        "Flores, Guía completa para el desarrollo de un sistema de almacenamiento de energía con baterías (BESS), sec. 4.1"
+      ],
+      "readingMin": 2
+    },
+    "2026-10-11": {
+      "shortCategory": "IA",
+      "title": "¿Qué es la inteligencia artificial? Programar con datos",
+      "description": "La inteligencia artificial no tiene una definición única, pero las fuentes coinciden en lo esencial. Su rama más exitosa cambia la forma de programar: en vez de escribir reglas, se le muestran ejemplos al programa.",
+      "detail": "La *{UNESCO} evita dar una definición única de inteligencia artificial, porque la tecnología cambia muy rápido. Describe los sistemas de IA como sistemas «capaces de procesar datos e información de una manera que se asemeja a un comportamiento inteligente»: razonar, aprender, percibir, predecir, planificar o controlar.\n\nLa *{Política Nacional de Inteligencia Artificial} de Chile usa la definición de la OCDE: un «sistema computacional que puede, para un determinado conjunto de objetivos definidos por humanos, hacer predicciones y recomendaciones o tomar decisiones que influyen en entornos reales o virtuales».\n\nDentro de la IA hay ramas que conviene distinguir:\n\n• Aprendizaje automático (machine learning): sistemas que aprenden solos identificando patrones en grandes cantidades de datos.\n• Aprendizaje profundo (deep learning): una parte del anterior que usa redes neuronales de muchas capas; la información se transforma al pasar de una capa a la siguiente.\n\nSon conjuntos anidados: todo aprendizaje profundo es aprendizaje automático, y todo aprendizaje automático es IA, pero no al revés.\n\n¿Qué cambia respecto de la programación tradicional? *{Zhang y coautores} (*{Dive into Deep Learning}) lo explican con un ejemplo: reconocer cuándo alguien dice la palabra que activa un asistente de voz. Escribir a mano las reglas para convertir un audio en «sí» o «no» es casi imposible. En cambio, se crea un programa con parámetros ajustables y se le muestran muchos audios ya etiquetados hasta encontrar los valores que mejor funcionan. Los autores llaman a esto «programar con datos».\n\nEste enfoque conviene cuando una tarea es demasiado compleja para escribirla como reglas, pero las personas sí saben hacerla y pueden reunir ejemplos.\n\nLas fuentes también marcan un límite: según la *{UNESCO}, la IA puede apoyar decisiones, pero no reemplazar la responsabilidad final de las personas.",
+      "keyConcepts": "La IA abarca sistemas que procesan datos de forma parecida a un comportamiento inteligente. El aprendizaje automático aprende de los datos, y el aprendizaje profundo lo hace con redes de muchas capas. En vez de escribir reglas, se programa con ejemplos.",
+      "sources": [
+        "UNESCO, Recomendación sobre la ética de la inteligencia artificial, sec. I (pág. 9) y III.2 (pág. 22)",
+        "Ministerio de Ciencia, Tecnología, Conocimiento e Innovación, Política Nacional de Inteligencia Artificial (2021), pág. 8 y glosario (págs. 69-70)",
+        "Zhang, Lipton, Li y Smola, Dive into Deep Learning, cap. 1 (sec. 1.1 y 1.7)"
+      ],
+      "readingMin": 2
+    },
+    "2026-10-12": {
+      "shortCategory": "Electricidad",
+      "title": "Histéresis, la memoria del núcleo que se paga en calor",
+      "description": "La histéresis es la tendencia de un núcleo ferromagnético a conservar su estado magnético anterior. De ella dependen las pérdidas en el hierro de transformadores y motores, y la elección entre materiales blandos y duros.",
+      "detail": "*{Chapman} (*{Máquinas eléctricas}, 5.ª ed., cap. 1) la define como la dependencia del flujo en el núcleo no solo de la fuerza magnetomotriz aplicada, sino también de la historia previa del flujo. La explicación está en los dominios magnéticos: al aplicar un campo, los dominios alineados crecen a costa de los demás, y al retirarlo no vuelven solos a su orden al azar. Por eso, con la fuerza magnetomotriz en cero, queda un flujo residual, y para anularlo hay que aplicar en sentido contrario una fuerza magnetomotriz coercitiva.\n\nEn corriente alterna, el núcleo recorre ese lazo en cada ciclo, y reorientar los dominios cuesta energía. Según *{Vukosavic} (*{Electrical Machines}, sec. 4.7.1), la energía perdida por ciclo es proporcional al área del lazo en el plano B-H y se convierte en calor. La potencia perdida crece con la frecuencia y, aproximadamente, con el cuadrado de la inducción máxima. En el circuito equivalente del transformador, *{Chapman} representa estas pérdidas, junto con las de corrientes parásitas, mediante una resistencia en paralelo, y aclara que es solo una aproximación.\n\nDe ahí sale el criterio para elegir materiales. En los núcleos de transformadores y máquinas se usan materiales blandos. *{Ida} (*{Engineering Electromagnetics}, sec. 9.2.3) los caracteriza por un campo coercitivo menor a 50 A/m y un lazo estrecho. El acero con 3 % de silicio, por ejemplo, registra 8 A/m. *{Molina, Cánovas y Ruz} (*{Motores y máquinas eléctricas}) indican que las chapas se alean con 3 % a 5 % de silicio y se arman aisladas, con un espesor aproximado de 0,35 mm. Así se reducen a la vez las pérdidas por histéresis y las de corrientes parásitas. Como referencia, su Tabla 2.1 da pérdidas de 0,8 a 1,3 W/kg en chapa normal y de 0,4 a 0,5 W/kg en chapa de grano orientado, a 50 Hz y 1 T.\n\nEn los imanes permanentes se busca lo contrario: materiales duros, con remanencia y campo coercitivo altos y un lazo ancho. Es el caso del neodimio-hierro-boro, con un campo coercitivo de 9,5·10⁵ A/m (TL00801C, tabla 1.4.6).\n\nLas fuentes no fijan un límite máximo para estas pérdidas ni citan normas sobre el tema, así que los valores sirven como referencia.",
+      "keyConcepts": "Por la histéresis, el núcleo conserva su estado magnético, y en cada ciclo de corriente alterna esa memoria se paga en calor, en proporción al área del lazo. Por eso los núcleos usan materiales blandos, de lazo estrecho, y los imanes, materiales duros, de lazo ancho.",
+      "sources": [
+        "Chapman, Máquinas eléctricas, 5.ª ed.",
+        "Molina, Cánovas y Ruz, Motores y máquinas eléctricas",
+        "Vukosavic, Electrical Machines (2013)",
+        "Ida, Engineering Electromagnetics (2015)"
+      ],
+      "readingMin": 2
+    },
+    "2026-10-13": {
+      "shortCategory": "Mecánica",
+      "title": "Primera ley de Newton, por qué las cosas siguen como están",
+      "description": "Un cuerpo no necesita una fuerza para seguir moviéndose: la necesita para cambiar su movimiento. Esa idea, la inercia, explica desde el cinturón de seguridad hasta por qué una carga suelta se desliza en un camión que frena.",
+      "detail": "Durante siglos se pensó que un objeto se mueve solo mientras algo lo empuja. Newton propuso lo contrario en su primera ley, también llamada ley de inercia: si sobre un cuerpo no actúa una fuerza neta, el cuerpo en reposo sigue en reposo, y el que se mueve sigue moviéndose en línea recta con la misma rapidez.\n\nEscrita como condición:\n\nΣF = 0  →  v = constante\n\ndonde ΣF es la fuerza neta, es decir, la suma de todas las fuerzas que actúan sobre el cuerpo (N), y v es su velocidad (m/s). Si la suma da cero, la velocidad no cambia: ni su valor ni su dirección. Estar en reposo es solo el caso v = 0.\n\n¿Por qué entonces una caja que empujamos por el suelo termina deteniéndose? Porque sí hay una fuerza: el roce con el piso. Mientras menos roce, más lejos llega. Un disco de hockey sobre hielo avanza mucho antes de frenar porque el hielo casi no lo frena.\n\nLa tendencia de un cuerpo a mantener su estado de movimiento se llama inercia, y su medida es la masa (kg). Mientras más masa tiene un cuerpo, más cuesta acelerarlo o detenerlo.\n\nLa ley se ve todos los días:\n\n• En un bus que frena de golpe, los pasajeros se van hacia adelante: su cuerpo sigue moviéndose aunque el bus se detenga. El cinturón de seguridad aplica la fuerza que los frena junto con el vehículo.\n• En un camión, una carga sin amarrar se desliza al frenar o al tomar una curva: nada la obliga a cambiar su movimiento junto con la plataforma. Por eso la carga se estiba y se amarra.\n\nUn detalle importante: la ley se cumple cuando se observa desde un marco de referencia inercial, uno que no acelera. Para la mayoría de los problemas de ingeniería, el suelo cumple esa condición.",
+      "keyConcepts": "Si la fuerza neta sobre un cuerpo es cero, su velocidad no cambia: sigue en reposo o en movimiento rectilíneo uniforme. Esa tendencia es la inercia, y la masa es su medida. Para cambiar el movimiento se necesita una fuerza.",
+      "sources": [
+        "Serway y Jewett, Física para ciencias e ingeniería, vol. 1, 7.ª ed., cap. 5 (Las leyes del movimiento)"
+      ],
+      "readingMin": 2
+    },
+    "2026-10-14": {
+      "shortCategory": "Automatización",
+      "title": "Lazo abierto o lazo cerrado, la diferencia está en medir",
+      "description": "Un sistema de control puede dar órdenes sin mirar el resultado, o medir lo que pasa y corregir. Esa diferencia, llamada realimentación, separa al lazo abierto del lazo cerrado.",
+      "detail": "*{Mandado y coautores} definen el control en lazo abierto como aquel en que el sistema «no recibe información acerca del valor que tiene la variable» que controla. Da la orden y confía en que se cumpla.\n\nUn ejemplo de los mismos autores es el arranque de un motor con contactor y pulsadores de marcha y paro. El circuito enciende el motor, pero no mide su velocidad: si la carga del eje cambia, la velocidad cambia y nadie la corrige. Lo mismo pasa con un horno que calienta sin medir su temperatura.\n\nEn el lazo cerrado, en cambio, el sistema recibe en sus entradas el valor de lo que controla; por eso se dice que está realimentado. Un sensor mide la variable y el controlador la compara con el valor deseado:\n\ne = SP − PV\n\ndonde e es el error, SP (setpoint) es el valor que se quiere lograr, o consigna, y PV (process variable) es el valor que mide el sensor. Ambos se expresan en la unidad de la variable controlada, por ejemplo °C o bar. Si el error no es cero, el controlador actúa para reducirlo.\n\nUn ejemplo simple: un estanque con dos sensores de nivel, uno abajo y otro arriba. Cuando el agua baja del sensor inferior, se enciende la bomba; cuando llega al superior, se apaga. El nivel se mantiene entre esos dos límites porque el sistema mide.\n\n*{Rodríguez Penin} lo resume con dos motores. Un motor paso a paso trabaja en lazo abierto: cuenta los pasos que ordenó, pero no sabe dónde quedó realmente, y ante una sobrecarga puede perder pasos. Un motor con encoder trabaja en lazo cerrado: mide su posición real y corrige.\n\nEl lazo abierto es más simple y barato, y sirve cuando las perturbaciones no importan. El lazo cerrado necesita sensores y un buen ajuste, pero mantiene la variable donde se quiere aunque cambien las condiciones.",
+      "keyConcepts": "En lazo abierto, el control da la orden sin medir el resultado. En lazo cerrado, un sensor mide la variable y el controlador corrige según el error, e = SP − PV. Medir es lo que permite compensar las perturbaciones.",
+      "sources": [
+        "Mandado, Marcos, Fernández y Armesto, Autómatas programables y sistemas de automatización, 2.ª ed. (2008), cap. 1 (pág. 8), cap. 4 (págs. 266-267) y cap. 6 (pág. 376)",
+        "Rodríguez Penin, Sistemas SCADA, 3.ª ed. (2012), cap. 1 (pág. 10)",
+        "Romera, Lorite y Montoro, Automatización. Problemas resueltos con autómatas programables (1994), introducción"
+      ],
+      "readingMin": 2
+    },
+    "2026-10-15": {
+      "shortCategory": "Electrónica",
+      "title": "Rectificación controlada, cómo un tiristor regula la energía",
+      "description": "Un rectificador común convierte la corriente alterna en continua, pero entrega siempre lo mismo. Si en vez de diodos se usan tiristores, se puede elegir en qué momento de cada ciclo empiezan a conducir, y así regular cuánta energía llega a la carga.",
+      "detail": "El tiristor, o SCR (rectificador controlado de silicio), se parece a un diodo con un interruptor de encendido. Tiene tres terminales: ánodo, cátodo y compuerta. Para que conduzca se necesitan dos condiciones: que el ánodo esté a mayor tensión que el cátodo y que llegue un pulso a la compuerta. Una vez encendido, sigue conduciendo aunque el pulso desaparezca, y se apaga solo cuando la corriente cae a cero.\n\nEsa característica permite controlar un rectificador. En cada semiciclo positivo de la red, el SCR no conduce de inmediato: espera el pulso de compuerta. El retardo se mide como un ángulo, el ángulo de disparo α. Mientras mayor es α, más tarde se enciende el SCR y menos tensión llega a la carga.\n\nEn el caso más simple, un rectificador monofásico de media onda con carga resistiva, la tensión media en la carga es:\n\nV_{cc} = (V_{m} / 2π) · (1 + cos α)\n\ndonde V_{cc} es la tensión continua media sobre la carga (V), V_{m} es el valor máximo de la tensión alterna de entrada (V) y α es el ángulo de disparo (grados o radianes). Con α = 0° el SCR actúa como un diodo y entrega el máximo; con α = 90° entrega la mitad, y con α = 180° no entrega nada.\n\nEn la industria se usan versiones más completas. El puente trifásico controlado tiene seis tiristores, dos por fase, que se disparan en secuencia; entrega una tensión continua con menos ondulación y permite manejar potencias altas. Si a la salida se agrega un filtro LC (una bobina en serie y un condensador en paralelo), la tensión queda aún más pareja.\n\nAsí se regulan, por ejemplo, la velocidad de motores de corriente continua, cargadores de baterías y hornos eléctricos: cambiando el ángulo de disparo se ajusta la energía sin desperdiciarla en resistencias.",
+      "keyConcepts": "Un tiristor conduce cuando su ánodo es positivo y recibe un pulso en la compuerta, y se apaga cuando la corriente llega a cero. Retrasando ese pulso, el ángulo de disparo α, se regula la tensión continua que llega a la carga.",
+      "sources": [
+        "Rashid, Electrónica de potencia: circuitos, dispositivos y aplicaciones (capítulos de tiristores y rectificadores controlados)",
+        "Hart, Electrónica de potencia (capítulo de rectificadores controlados)"
+      ],
+      "readingMin": 2
+    },
+    "2026-10-16": {
+      "shortCategory": "Informática",
+      "title": "Verdadero o falso, la lógica detrás de cada «if»",
+      "description": "Cada vez que un programa decide algo, evalúa una condición que solo puede ser verdadera o falsa. Esas decisiones siguen reglas de la lógica que existen desde mucho antes que los computadores.",
+      "detail": "*{Manzano, Hodkinson y Huertas} explican que la lógica clásica trabaja con enunciados que solo tienen dos valores posibles: verdadero (1) o falso (0). Los programas usan esa misma idea. *{Joyanes Aguilar} muestra que, en lenguajes como C, verdadero se representa con 1 (o cualquier valor distinto de cero) y falso con 0.\n\nLas condiciones se combinan con tres operadores básicos, que en muchos lenguajes se escriben así:\n\n• NO (not, !): invierte el valor; lo verdadero pasa a falso y viceversa.\n• Y (and, &&): es verdadero solo si ambas partes son verdaderas.\n• O (or, ||): es verdadero si al menos una parte es verdadera.\n\n*{Joyanes} da dos ejemplos. La expresión (1 < 5) y (5 < 10) es verdadera, porque ambas comparaciones lo son. La expresión (5 > 10) o ('A' < 'B') también es verdadera: la primera parte es falsa, pero la segunda es verdadera, porque en el código ASCII la letra A va antes que la B.\n\nPara revisar todas las combinaciones posibles se usa una tabla de verdad. Con n condiciones distintas, la tabla tiene:\n\n2^{n} filas\n\ndonde n es el número de condiciones. Con 2 condiciones hay 4 casos; con 3, hay 8. Por eso conviene que las condiciones de un programa sean simples.\n\nLas leyes de De Morgan, que recogen *{Manzano y coautores}, ayudan a simplificarlas. Por ejemplo, decir «no es cierto que A y B sean verdaderas» equivale a decir «A es falsa o B es falsa». En código: !(A && B) es lo mismo que (!A || !B).\n\nAsí, cada «if» que se escribe es una pequeña pregunta de lógica: el programa evalúa la condición, obtiene 1 o 0, y elige qué camino seguir.",
+      "keyConcepts": "Las condiciones de un programa solo valen verdadero (1) o falso (0) y se combinan con NO, Y y O. Con n condiciones hay 2^{n} casos posibles, y las leyes de De Morgan permiten reescribirlas de forma más simple.",
+      "sources": [
+        "Manzano, Hodkinson y Huertas, Lógica para principiantes (2000), cap. 1-3 (págs. 11-43)",
+        "Joyanes Aguilar, Fundamentos de programación: algoritmos, estructura de datos y objetos, 4.ª ed. (2008), cap. 3 (págs. 101-102)"
+      ],
+      "readingMin": 2
+    },
+    "2026-10-17": {
+      "shortCategory": "Energía",
+      "title": "Factor de potencia, la energía que se paga y no trabaja",
+      "description": "No toda la corriente que circula por una instalación produce trabajo. El factor de potencia mide qué parte sí lo hace, y un valor bajo obliga a usar cables y transformadores más grandes.",
+      "detail": "*{Barcón, Guerrero y Martínez} distinguen tres potencias en corriente alterna:\n\n• Potencia activa (P, en W): la que produce trabajo útil, como mover un motor o calentar.\n• Potencia reactiva (Q, en VAR): la que va y vuelve entre la fuente y equipos como motores y transformadores, que la necesitan para crear sus campos magnéticos. No produce trabajo.\n• Potencia aparente (S, en VA): la total que entrega la fuente.\n\nEl factor de potencia (fp) es la relación entre la potencia que trabaja y la total:\n\nfp = P / S\n\nVale entre 0 y 1. Mientras más cerca de 1, mejor se aprovecha la energía. Las tres potencias se relacionan como los lados de un triángulo rectángulo: S^{2} = P^{2} + Q^{2}.\n\n¿Qué lo baja? Según los autores, los equipos con bobinas: motores de inducción, transformadores (un transformador en vacío tiene un fp cercano a 0,1), soldadoras y hornos de inducción.\n\n¿Por qué importa? Con un fp bajo, para entregar la misma potencia útil circula más corriente. Eso significa más pérdidas por calor en los cables, más caída de tensión y transformadores ocupados en parte por energía que no trabaja. En un ejemplo de los mismos autores, subir el fp de una carga de 0,70 a 0,95 baja la corriente del alimentador de 1.312 A a 967 A, un 26 % menos.\n\nAdemás, muchas compañías eléctricas cobran recargos por fp bajo. El libro muestra el caso de México, donde se exige un promedio mínimo de 0,9; las reglas cambian en cada país.",
+      "keyConcepts": "El factor de potencia, fp = P / S, indica qué parte de la potencia total produce trabajo. Las bobinas de motores y transformadores lo bajan, y un fp bajo obliga a mover más corriente para hacer el mismo trabajo.",
+      "sources": [
+        "Barcón, Guerrero y Martínez, Calidad de la energía: factor de potencia y filtrado de armónicas (2012), cap. 1 (sec. 1.4.7-1.4.11, págs. 23-27) y cap. 2 (sec. 2.1-2.2, págs. 35-42; ej. 2.7, pág. 57)"
+      ],
+      "readingMin": 2
+    },
+    "2026-10-18": {
+      "shortCategory": "IA",
+      "title": "Entrenar, validar y probar, por qué los datos se separan en tres",
+      "description": "Un modelo de inteligencia artificial puede parecer excelente con los datos que ya conoce y fallar con los nuevos. Para evitar ese engaño, los datos se dividen en tres grupos con funciones distintas.",
+      "detail": "En el aprendizaje supervisado, explican *{Zhang y coautores} (*{Dive into Deep Learning}), el modelo recibe ejemplos que tienen dos partes: las características, que son los datos de entrada, y la etiqueta, que es lo que se quiere predecir. Por ejemplo, las características de una casa (superficie, ubicación, año) y su precio.\n\nLa meta no es acertar con los ejemplos ya vistos, sino con casos nuevos. Por eso los datos se separan en tres grupos:\n\n• Entrenamiento: con estos ejemplos el modelo ajusta sus parámetros. Es la etapa en que «aprende».\n• Validación: sirve para comparar modelos y elegir su configuración. El modelo no aprende de ellos, pero el diseñador sí los usa para decidir.\n• Prueba: se guardan aparte hasta el final y se usan una sola vez, para medir qué tan bien funciona el modelo con datos que nunca vio.\n\nLos autores advierten un error común: revisar una y otra vez los datos de prueba mientras se ajusta el modelo. Cada vez que se toma una decisión mirando esos resultados, el modelo se acomoda un poco a ellos, y la prueba deja de ser un examen imparcial.\n\nUn ejemplo del libro es la competencia Kaggle de precios de casas: 1.460 viviendas con su precio para entrenar y 1.459 sin precio para la prueba final, con 80 características cada una.\n\nCuando hay pocos datos, *{D2L} describe la validación cruzada de K partes: los datos de entrenamiento se dividen en K grupos, se entrena con K − 1 y se valida con el que queda, rotando hasta usar cada grupo una vez como validación.\n\nLas fuentes no fijan una proporción única para dividir los datos (como 80/20); depende de cuántos haya.",
+      "keyConcepts": "Los datos de entrenamiento sirven para aprender, los de validación para elegir el modelo y los de prueba para medirlo al final, una sola vez. Mirar la prueba mientras se ajusta el modelo hace que su resultado deje de ser confiable.",
+      "sources": [
+        "Zhang, Lipton, Li y Smola, Dive into Deep Learning, cap. 1 (sec. 1.2-1.3), cap. 3 (sec. 3.6), cap. 4 (sec. 4.6) y cap. 5 (sec. 5.7)"
+      ],
+      "readingMin": 2
+    }
+  }
+}

@@ -14,7 +14,16 @@ import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 // ═══════════════════════════════════════════════════
 // STORAGE
 // ═══════════════════════════════════════════════════
-const CLAVE_ESTADO = "ingeniedia-estado";
+// Fecha simulada para probar la app: ?simular=AAAA-MM-DD en la dirección.
+// Mientras se simula, el progreso se guarda aparte y lo que se envía
+// (comentarios, encuesta) va a la base de datos de prueba, no a la real.
+const FECHA_SIMULADA = (() => {
+  try {
+    const f = new URLSearchParams(window.location.search).get("simular");
+    return f && /^\d{4}-\d{2}-\d{2}$/.test(f) ? f : null;
+  } catch { return null; }
+})();
+const CLAVE_ESTADO = FECHA_SIMULADA ? "ingeniedia-estado-simulado" : "ingeniedia-estado";
 
 // El progreso vive en el teléfono del estudiante. Nada sale del dispositivo.
 async function storePersist(s) {
@@ -32,10 +41,11 @@ async function storeHydrate(defaults) {
 // ═══════════════════════════════════════════════════
 // Fecha real del dispositivo. Se recalcula al montar la app.
 const hoyKey = () => {
+  if (FECHA_SIMULADA) return FECHA_SIMULADA;
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 };
-const APP_VERSION = "0.4.1";
+const APP_VERSION = "0.5.0";
 const CORREO_CONTACTO = "anbasther@gmail.com";
 
 // Aviso que acompaña a cada artículo. El texto completo está en /terminos.
@@ -46,6 +56,29 @@ const AVISO_REFERENCIAL = "Guía referencial de carácter educativo. No reemplaz
 const JUSTIFICADO = { textAlign:"justify", hyphens:"auto", WebkitHyphens:"auto" };
 const TEXTO_LARGO = { ...JUSTIFICADO, whiteSpace:"pre-line" };
 const FONT        = "'IBM Plex Sans', system-ui, sans-serif";
+
+// Subíndices y superíndices en el texto de los artículos:
+// x_{CM} → x con CM abajo; m/s^{2} → m/s con 2 arriba.
+// _{x} subíndice · ^{x} superíndice · *{x} mención a una fuente (cursiva)
+const MARCA_INDICE = /([_^*])\{([^{}]*)\}/g;
+function conIndices(texto) {
+  if (typeof texto !== "string" || !/[_^*]\{/.test(texto)) return texto;
+  const partes = []; let ultimo = 0, m, k = 0;
+  MARCA_INDICE.lastIndex = 0;
+  while ((m = MARCA_INDICE.exec(texto))) {
+    if (m.index > ultimo) partes.push(texto.slice(ultimo, m.index));
+    if (m[1] === "*") partes.push(<em key={k++} className="fuente">{m[2]}</em>);
+    else {
+      const Tag = m[1] === "_" ? "sub" : "sup";
+      partes.push(<Tag key={k++} style={{ fontSize:"0.75em", lineHeight:0 }}>{m[2]}</Tag>);
+    }
+    ultimo = m.index + m[0].length;
+  }
+  if (ultimo < texto.length) partes.push(texto.slice(ultimo));
+  return partes;
+}
+// Para compartir como texto plano.
+const sinMarcas = (t) => String(t || "").replace(MARCA_INDICE, "$2");
 const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 const DAYS   = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
 
@@ -221,195 +254,359 @@ const THEMES = {
 // ═══════════════════════════════════════════════════
 // HERO ILLUSTRATIONS
 // ═══════════════════════════════════════════════════
-function HeroElectricidad({ color }) {
+// Marco común de los fondos: 400×180, recortado al recuadro.
+// Zona segura: x 30–370 (los bordes se recortan en teléfonos angostos);
+// la esquina superior derecha la ocupa el botón de ampliar.
+function HeroSvg({ fondo, children }) {
   return (
-    <svg viewBox="0 0 400 180" xmlns="http://www.w3.org/2000/svg"
-      style={{ position:"absolute", inset:0, width:"100%", height:"100%" }}>
-      <rect width="400" height="180" fill="#0a0f1e"/>
-      {[40,80,120,160,200,240,280,320,360].map(x =>
-        <line key={x} x1={x} y1="0" x2={x} y2="180" stroke="#fff" strokeOpacity=".03" strokeWidth="1"/>)}
-      {[30,60,90,120,150].map(y =>
-        <line key={y} x1="0" y1={y} x2="400" y2={y} stroke="#fff" strokeOpacity=".03" strokeWidth="1"/>)}
-      <rect x="30" y="30" width="340" height="8" rx="2" fill={color} opacity=".9"/>
-      <rect x="30" y="142" width="340" height="8" rx="2" fill={color} opacity=".5"/>
-      {[60,120,180,240,300].map((x,i) => (
-        <g key={x}>
-          <line x1={x} y1="38" x2={x} y2="142" stroke="#fff" strokeOpacity=".18" strokeWidth="1" strokeDasharray="4 3"/>
-          <rect x={x-14} y="65" width="28" height="50" rx="4" fill="#1e293b"
-            stroke={i===2?color:"#334155"} strokeWidth={i===2?2:1}/>
-          <rect x={x-7} y="72" width="14" height="8" rx="2" fill={i===2?color:"#475569"} opacity=".9"/>
-          <line x1={x} y1="80" x2={x} y2="108" stroke={i===2?color:"#64748b"} strokeWidth="2"/>
-          <circle cx={x} cy="112" r="4" fill={i===2?color:"#475569"}/>
-          <text x={x} y="126" textAnchor="middle" fontSize="7" fill="#64748b">{`Q${i+1}`}</text>
-        </g>
-      ))}
-      <defs>
-        <marker id="arr1" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
-          <path d="M0,0 L6,3 L0,6 Z" fill={color}/>
-        </marker>
-      </defs>
-      <line x1="180" y1="48" x2="180" y2="63" stroke={color} strokeWidth="1.5" markerEnd="url(#arr1)"/>
-      <text x="196" y="57" fontSize="8" fill={color} opacity=".8">falla</text>
-      <ellipse cx="180" cy="90" rx="60" ry="40" fill={color} opacity=".04"/>
+    <svg viewBox="0 0 400 180" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg"
+      style={{ position:"absolute", inset:0, width:"100%", height:"100%" }}
+      fontFamily="'IBM Plex Mono', ui-monospace, monospace">
+      <rect width="400" height="180" fill={fondo}/>
+      {children}
     </svg>
   );
 }
+const ROTULO = { fontSize:7.5, fill:"#94a3b8" };
 
-function HeroEnergia({ color }) {
-  const pts = (amp, freq) =>
-    Array.from({length:200}, (_,i) => `${i*2},${90-amp*Math.sin(i*freq*Math.PI/80)}`).join(" ");
-  const comp = Array.from({length:200}, (_,i) =>
-    `${i*2},${90-50*Math.sin(i*2*Math.PI/80)-22*Math.sin(i*6*Math.PI/80)-14*Math.sin(i*10*Math.PI/80)}`).join(" ");
-  return (
-    <svg viewBox="0 0 400 180" xmlns="http://www.w3.org/2000/svg"
-      style={{ position:"absolute", inset:0, width:"100%", height:"100%" }}>
-      <rect width="400" height="180" fill="#061a10"/>
-      <line x1="0" y1="90" x2="400" y2="90" stroke="#fff" strokeOpacity=".08" strokeWidth="1"/>
-      <polyline points={pts(50,2)}  fill="none" stroke={color}   strokeWidth="2.5" opacity=".9"/>
-      <polyline points={pts(22,6)}  fill="none" stroke="#facc15" strokeWidth="1.5" opacity=".6"/>
-      <polyline points={pts(14,10)} fill="none" stroke="#f87171" strokeWidth="1"   opacity=".5"/>
-      <polyline points={comp}       fill="none" stroke="#fff"    strokeWidth="1"   opacity=".2" strokeDasharray="3 2"/>
-      <rect x="12" y="12" width="8" height="3" rx="1" fill={color}/>
-      <text x="24" y="16" fontSize="8" fill={color}>Fundamental</text>
-      <rect x="12" y="24" width="8" height="3" rx="1" fill="#facc15"/>
-      <text x="24" y="28" fontSize="8" fill="#facc15">3° armónico</text>
-      <rect x="12" y="36" width="8" height="3" rx="1" fill="#f87171"/>
-      <text x="24" y="40" fontSize="8" fill="#f87171">5° armónico</text>
-    </svg>
+function HeroAutomatizacion({ color }) {
+  const L = 52, R = 348, y1 = 66, y2 = 114;
+  const na = (x, y, label, nc=false) => (        // contacto: | | (NA) o |/| (NC)
+    <g>
+      <line x1={x} y1={y-9} x2={x} y2={y+9} stroke={color} strokeWidth="1.6"/>
+      <line x1={x+10} y1={y-9} x2={x+10} y2={y+9} stroke={color} strokeWidth="1.6"/>
+      {nc && <line x1={x-3} y1={y+9} x2={x+13} y2={y-9} stroke={color} strokeWidth="1.3"/>}
+      <text x={x+5} y={y-14} textAnchor="middle" fontSize="8.5" fill="#cbd5e1">{label}</text>
+    </g>
   );
-}
-
-function HeroIA({ color }) {
-  const nodes = [[60,50],[120,44],[200,48],[270,42]];
-  const signal = Array.from({length:160}, (_,i) => {
-    const n = Math.sin(i*.8)*8 + Math.sin(i*2.1)*4 + Math.sin(i*5)*2;
-    return `${40+i*2},${100-(i>100 ? n+(i-100)*.4 : n)}`;
-  }).join(" ");
   return (
-    <svg viewBox="0 0 400 180" xmlns="http://www.w3.org/2000/svg"
-      style={{ position:"absolute", inset:0, width:"100%", height:"100%" }}>
-      <rect width="400" height="180" fill="#0d0a1e"/>
-      <line x1="40" y1="140" x2="370" y2="140" stroke="#fff" strokeOpacity=".12" strokeWidth="1"/>
-      {nodes.map(([x,y],i) => (
-        <g key={i}>
-          <circle cx={x} cy={y} r="3" fill={color} opacity=".6"/>
-          {i < nodes.length-1 &&
-            <line x1={x+3} y1={y} x2={nodes[i+1][0]-3} y2={nodes[i+1][1]}
-              stroke={color} strokeWidth=".8" opacity=".3"/>}
-        </g>
-      ))}
-      <polyline points={signal} fill="none" stroke={color} strokeWidth="1.5" opacity=".85"/>
-      <line x1="40" y1="68" x2="370" y2="68" stroke="#f87171" strokeWidth="1" strokeDasharray="6 3" opacity=".7"/>
-      <text x="374" y="71" fontSize="8" fill="#f87171">umbral</text>
-      <rect x="240" y="68" width="130" height="72" fill="#f87171" fillOpacity=".03" rx="2"/>
-      <circle cx="310" cy="104" r="12" fill="#f87171" fillOpacity=".1" stroke="#f87171" strokeWidth="1"/>
-      <text x="310" y="108" textAnchor="middle" fontSize="11" fill="#f87171">!</text>
-      <text x="40" y="30" fontSize="9" fill={color} opacity=".7">Señal de condición</text>
-      <text x="40" y="42" fontSize="8" fill="#64748b">Vibración (mm/s)</text>
-    </svg>
+    <HeroSvg fondo="#061a10">
+      <line x1={L} y1="40" x2={L} y2="140" stroke={color} strokeWidth="2"/>
+      <line x1={R} y1="40" x2={R} y2="140" stroke={color} strokeWidth="2"/>
+      <text x={L} y="153" textAnchor="middle" {...ROTULO}>L1</text>
+      <text x={R} y="153" textAnchor="middle" {...ROTULO}>N</text>
+      {/* Rama principal: parada (NC) → marcha (NA) → bobina */}
+      <line x1={L} y1={y1} x2="95" y2={y1} stroke={color} strokeWidth="1.3"/>
+      {na(95, y1, "S0", true)}
+      <line x1="105" y1={y1} x2="160" y2={y1} stroke={color} strokeWidth="1.3"/>
+      {na(160, y1, "S1")}
+      <line x1="170" y1={y1} x2="262" y2={y1} stroke={color} strokeWidth="1.3"/>
+      <circle cx="274" cy={y1} r="12" fill={color} fillOpacity=".12" stroke={color} strokeWidth="1.6"/>
+      <text x="274" y={y1+3} textAnchor="middle" fontSize="8.5" fill={color}>K1</text>
+      <line x1="286" y1={y1} x2={R} y2={y1} stroke={color} strokeWidth="1.3"/>
+      {/* Retención: K1 en paralelo con S1 */}
+      <line x1="140" y1={y1} x2="140" y2={y2} stroke={color} strokeWidth="1.3"/>
+      <line x1="140" y1={y2} x2="160" y2={y2} stroke={color} strokeWidth="1.3"/>
+      {na(160, y2, "K1")}
+      <line x1="170" y1={y2} x2="190" y2={y2} stroke={color} strokeWidth="1.3"/>
+      <line x1="190" y1={y2} x2="190" y2={y1} stroke={color} strokeWidth="1.3"/>
+      <circle cx="140" cy={y1} r="2.2" fill={color}/>
+      <circle cx="190" cy={y1} r="2.2" fill={color}/>
+      <path d="M 196 104 q 22 -2 30 -24" fill="none" stroke="#e2e8f0" strokeOpacity=".5" strokeWidth="1" strokeDasharray="3 2"/>
+      <text x="206" y="124" fontSize="8" fill="#cbd5e1" opacity=".85">retención</text>
+      <text x={L+16} y="172" {...ROTULO}>Autoenclavamiento · S0 parada · S1 marcha</text>
+    </HeroSvg>
   );
 }
 
 function HeroInformatica({ color }) {
-  const nodes = [[80,60],[200,45],[320,62],[140,125],[265,120]];
-  const links = [[0,1],[1,2],[0,3],[3,4],[4,2],[1,4]];
+  const k = "#c084fc", f = color, n = "#fbbf24", t = "#e2e8f0", c = "#64748b";
+  const lineas = [
+    [[k,"def "],[f,"articulo_del_dia"],[t,"(fecha):"]],
+    [[c,"    # un tema de ingeniería por día"]],
+    [[t,"    area = AREAS["],[f,"fecha.weekday"],[t,"()]"]],
+    [[k,"    if not "],[t,"area:"]],
+    [[k,"        return "],[n,"None"]],
+    [[k,"    return "],[f,"publicar"],[t,"(area, fecha)"]],
+    [],
+    [[f,"print"],[t,"(articulo_del_dia("],[f,"hoy"],[t,"()))"],[color,"▌"]],
+  ];
   return (
-    <svg viewBox="0 0 400 180" xmlns="http://www.w3.org/2000/svg"
-      style={{ position:"absolute", inset:0, width:"100%", height:"100%" }}>
-      <rect width="400" height="180" fill="#0a1520"/>
-      {links.map(([a,b],i) => (
-        <line key={i} x1={nodes[a][0]} y1={nodes[a][1]} x2={nodes[b][0]} y2={nodes[b][1]}
-          stroke={color} strokeWidth=".8" opacity=".28"/>
+    <HeroSvg fondo="#0a1520">
+      <rect x="30" y="18" width="300" height="146" rx="6" fill="#0d1b2a" stroke="#fff" strokeOpacity=".06"/>
+      {[0,1,2].map(i => <circle key={i} cx={42+i*10} cy="28" r="2.6" fill={["#f87171","#fbbf24","#4ade80"][i]} opacity=".6"/>)}
+      <text x="80" y="31" {...ROTULO}>ingeniedia.py</text>
+      {lineas.map((partes, i) => (
+        <text key={i} x="40" y={52+i*14} fontSize="9.5" xmlSpace="preserve">
+          <tspan fill="#334155">{String(i+1).padStart(2," ")}  </tspan>
+          {partes.map(([col, txt], j) => <tspan key={j} fill={col}>{txt}</tspan>)}
+        </text>
       ))}
-      {nodes.map(([x,y],i) => (
-        <g key={i}>
-          <rect x={x-11} y={y-8} width="22" height="16" rx="3"
-            fill="#0a1520" stroke={color} strokeWidth="1" opacity=".8"/>
-          <circle cx={x} cy={y} r="2" fill={color} opacity=".9"/>
-        </g>
-      ))}
-      <rect x="186" y="28" width="28" height="6" rx="2" fill={color} opacity=".35"/>
-      <text x="40" y="30" fontSize="9" fill={color} opacity=".7">Red industrial</text>
-      <text x="40" y="42" fontSize="8" fill="#64748b">Nodos y protocolos</text>
-      <text x="330" y="160" fontSize="8" fill="#64748b">OPC UA</text>
-    </svg>
+    </HeroSvg>
   );
 }
 
-function HeroMecanica({ color }) {
-  const wave = Array.from({length:150}, (_,i) => {
-    const n = Math.sin(i*.55)*10 + Math.sin(i*1.9)*5 + Math.sin(i*4.3)*2.5;
-    return `${60+i*2},${125-n}`;
-  }).join(" ");
-  return (
-    <svg viewBox="0 0 400 180" xmlns="http://www.w3.org/2000/svg"
-      style={{ position:"absolute", inset:0, width:"100%", height:"100%" }}>
-      <rect width="400" height="180" fill="#1a1206"/>
-      <circle cx="130" cy="70" r="30" fill="none" stroke={color} strokeWidth="1.2" opacity=".75"/>
-      <circle cx="130" cy="70" r="19" fill="none" stroke={color} strokeWidth="1" opacity=".45"/>
-      <circle cx="130" cy="70" r="5" fill={color} opacity=".8"/>
-      {Array.from({length:8}).map((_,i) => {
-        const a = (i*Math.PI)/4;
-        return <circle key={i} cx={130+Math.cos(a)*24.5} cy={70+Math.sin(a)*24.5} r="3.2"
-          fill="none" stroke={color} strokeWidth=".9" opacity=".55"/>;
-      })}
-      <line x1="130" y1="70" x2="330" y2="70" stroke="#fff" strokeOpacity=".14" strokeWidth="2"/>
-      <line x1="60" y1="125" x2="360" y2="125" stroke="#fff" strokeOpacity=".1" strokeWidth="1"/>
-      <polyline points={wave} fill="none" stroke={color} strokeWidth="1.5" opacity=".85"/>
-      <text x="40" y="30" fontSize="9" fill={color} opacity=".7">Análisis de vibraciones</text>
-      <text x="40" y="42" fontSize="8" fill="#64748b">Espectro de rodamiento</text>
-    </svg>
+// Electricidad: esquema unilineal con símbolos IEC 60617 (los que usa el RIC):
+// medidor de energía, interruptores automáticos (termomagnéticos) y diferenciales.
+function HeroElectricidad({ color }) {
+  const W = 1.4;
+  const linea = (x1, y1, x2, y2) => <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth={W}/>;
+  // Interruptor automático (IEC 60617 07-13-05): contacto abierto con cruz en el contacto fijo.
+  const automatico = (x, y, label) => (
+    <g>
+      {linea(x, y, x+8, y)}
+      {linea(x+8, y, x+24, y-9)}
+      {linea(x+21, y-3, x+27, y+3)}{linea(x+27, y-3, x+21, y+3)}
+      {linea(x+24, y, x+34, y)}
+      <text x={x+17} y={y+13} textAnchor="middle" {...ROTULO}>{label}</text>
+    </g>
   );
-}
-
-function HeroAutomatizacion({ color }) {
-  const rungs = [50, 85, 120];
+  // Interruptor diferencial: contacto con mando mecánico (trazos) desde el transformador toroidal.
+  const diferencial = (x, y) => (
+    <g>
+      <ellipse cx={x+5} cy={y} rx="3.5" ry="7" fill="none" stroke={color} strokeWidth="1.1"/>
+      {linea(x-4, y, x+14, y)}
+      {linea(x+14, y, x+30, y-9)}
+      {linea(x+30, y, x+38, y)}
+      <line x1={x+5} y1={y-7} x2={x+5} y2={y-13} stroke={color} strokeWidth="1" strokeDasharray="2 1.5"/>
+      <line x1={x+5} y1={y-13} x2={x+22} y2={y-13} stroke={color} strokeWidth="1" strokeDasharray="2 1.5"/>
+      <line x1={x+22} y1={y-13} x2={x+22} y2={y-5} stroke={color} strokeWidth="1" strokeDasharray="2 1.5"/>
+      <text x={x+17} y={y+13} textAnchor="middle" {...ROTULO}>IΔn 30 mA</text>
+    </g>
+  );
+  // Marca de número de conductores en unifilar: trazos oblicuos.
+  const conductores = (x, y, n=2) => Array.from({ length:n }, (_, i) =>
+    <line key={i} x1={x+i*4-3} y1={y+4} x2={x+i*4+3} y2={y-4} stroke={color} strokeWidth="1"/>);
+  const circuitos = [
+    { y:56,  tm:"C10", carga:"TG" },
+    { y:98,  tm:"C16", carga:"TGAux" },
+    { y:140, tm:"C20", carga:"TTA" },
+  ];
   return (
-    <svg viewBox="0 0 400 180" xmlns="http://www.w3.org/2000/svg"
-      style={{ position:"absolute", inset:0, width:"100%", height:"100%" }}>
-      <rect width="400" height="180" fill="#04160f"/>
-      <line x1="70" y1="38" x2="70" y2="140" stroke={color} strokeWidth="1.4" opacity=".7"/>
-      <line x1="340" y1="38" x2="340" y2="140" stroke={color} strokeWidth="1.4" opacity=".7"/>
-      {rungs.map((y,i) => (
-        <g key={i}>
-          <line x1="70" y1={y} x2="150" y2={y} stroke={color} strokeWidth="1" opacity=".55"/>
-          <line x1="150" y1={y-9} x2="150" y2={y+9} stroke={color} strokeWidth="1.4" opacity=".85"/>
-          <line x1="163" y1={y-9} x2="163" y2={y+9} stroke={color} strokeWidth="1.4" opacity=".85"/>
-          <line x1="163" y1={y} x2="270" y2={y} stroke={color} strokeWidth="1" opacity=".55"/>
-          <circle cx="285" cy={y} r="9" fill="none" stroke={color} strokeWidth="1.3" opacity=".8"/>
-          <line x1="294" y1={y} x2="340" y2={y} stroke={color} strokeWidth="1" opacity=".55"/>
+    <HeroSvg fondo="#0a0f1e">
+      <text x="34" y="38" {...ROTULO}>Empalme</text>
+      {linea(44, 44, 44, 64)}
+      {conductores(44, 54)}
+      <rect x="32" y="64" width="24" height="18" fill="none" stroke={color} strokeWidth={W}/>
+      <text x="44" y="76" textAnchor="middle" fontSize="7.5" fill={color}>kWh</text>
+      {linea(44, 82, 44, 98)}{linea(44, 98, 62, 98)}
+      {automatico(62, 98, "C25")}
+      <text x="79" y="80" textAnchor="middle" {...ROTULO}>General</text>
+      {linea(96, 98, 126, 98)}
+      <rect x="126" y="46" width="4" height="104" fill={color} opacity=".9"/>
+      {circuitos.map(c => (
+        <g key={c.y}>
+          {linea(130, c.y, 150, c.y)}
+          {diferencial(154, c.y)}
+          {linea(192, c.y, 204, c.y)}
+          {automatico(204, c.y, c.tm)}
+          {linea(238, c.y, 262, c.y)}
+          {conductores(250, c.y)}
+          <path d={`M262,${c.y-4} L270,${c.y} L262,${c.y+4} Z`} fill={color}/>
+          <text x="276" y={c.y+3} fontSize="9" fill="#cbd5e1">{c.carga}</text>
         </g>
       ))}
-      <text x="40" y="30" fontSize="9" fill={color} opacity=".7">Lógica de control</text>
-      <text x="40" y="163" fontSize="8" fill="#64748b">IEC 61131-3 · Ladder</text>
-    </svg>
+      <text x="34" y="172" {...ROTULO}>Esquema unilineal · simbología IEC 60617</text>
+    </HeroSvg>
   );
 }
 
 function HeroElectronica({ color }) {
-  const pads = [[95,55],[160,55],[225,55],[290,55],[95,130],[160,130],[225,130],[290,130]];
+  const W = 1.3;
+  const ln = (x1, y1, x2, y2) => <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth={W}/>;
+  const top = 46, bot = 146;
+  // Tiristor vertical: conduce hacia arriba (ánodo abajo, cátodo arriba), compuerta al costado.
+  const scr = (x, y, n) => (
+    <g>
+      <path d={`M${x-7},${y+6} L${x+7},${y+6} L${x},${y-6} Z`} fill={color} fillOpacity=".25" stroke={color} strokeWidth={W}/>
+      {ln(x-7, y-6, x+7, y-6)}
+      <line x1={x+3} y1={y-3} x2={x+11} y2={y-9} stroke={color} strokeWidth="1"/>
+      <text x={x-10} y={y+3} textAnchor="end" fontSize="6.5" fill="#94a3b8">{n}</text>
+    </g>
+  );
+  const piernas = [124, 168, 212];
   return (
-    <svg viewBox="0 0 400 180" xmlns="http://www.w3.org/2000/svg"
-      style={{ position:"absolute", inset:0, width:"100%", height:"100%" }}>
-      <rect width="400" height="180" fill="#0d1608"/>
-      <path d="M95 55 L95 92 L160 92 L160 130" fill="none" stroke={color} strokeWidth="1.1" opacity=".5"/>
-      <path d="M225 55 L225 92 L290 92 L290 130" fill="none" stroke={color} strokeWidth="1.1" opacity=".5"/>
-      <path d="M160 55 L225 55" fill="none" stroke={color} strokeWidth="1.1" opacity=".5"/>
-      <path d="M95 130 L225 130" fill="none" stroke={color} strokeWidth="1.1" opacity=".5"/>
-      <line x1="60" y1="92" x2="95" y2="92" stroke={color} strokeWidth="1.1" opacity=".5"/>
-      <line x1="290" y1="92" x2="345" y2="92" stroke={color} strokeWidth="1.1" opacity=".5"/>
-      {pads.map(([x,y],i) => (
-        <circle key={i} cx={x} cy={y} r="4.5" fill="#0d1608" stroke={color} strokeWidth="1.2" opacity=".9"/>
+    <HeroSvg fondo="#0d1608">
+      {/* Fases */}
+      {["L1","L2","L3"].map((f, i) => {
+        const y = 76 + i*20, x = piernas[i];
+        return (
+          <g key={f}>
+            <circle cx="46" cy={y} r="6" fill="none" stroke={color} strokeWidth="1.1"/>
+            <path d={`M42,${y} q2,-4 4,0 t4,0`} fill="none" stroke={color} strokeWidth="1"/>
+            <text x="34" y={y+3} textAnchor="end" fontSize="7" fill="#cbd5e1">{f}</text>
+            {ln(52, y, x, y)}
+            <circle cx={x} cy={y} r="1.8" fill={color}/>
+          </g>
+        );
+      })}
+      {/* Puente */}
+      {piernas.map((x, i) => (
+        <g key={x}>
+          {ln(x, top, x, bot)}
+          {scr(x, 58, `T${2*i+1}`)}
+          {scr(x, 134, `T${2*i+2}`)}
+        </g>
       ))}
-      <rect x="176" y="78" width="48" height="30" rx="3" fill="#0d1608" stroke={color} strokeWidth="1.2" opacity=".85"/>
-      <text x="200" y="97" textAnchor="middle" fontSize="8" fill={color} opacity=".8">IC</text>
-      <text x="40" y="30" fontSize="9" fill={color} opacity=".7">Circuito de instrumentación</text>
-      <text x="300" y="163" fontSize="8" fill="#64748b">4–20 mA</text>
-    </svg>
+      {ln(124, top, 236, top)}{ln(124, bot, 330, bot)}
+      {/* Filtro LC y carga */}
+      {ln(236, top, 244, top)}
+      <path d={`M244,${top} a5,5 0 0 1 10,0 a5,5 0 0 1 10,0 a5,5 0 0 1 10,0 a5,5 0 0 1 10,0`} fill="none" stroke={color} strokeWidth={W}/>
+      <text x="264" y={top-10} textAnchor="middle" fontSize="8" fill="#cbd5e1">L</text>
+      {ln(284, top, 330, top)}
+      {ln(300, top, 300, 92)}{ln(290, 92, 310, 92)}{ln(290, 99, 310, 99)}{ln(300, 99, 300, bot)}
+      <text x="314" y="99" fontSize="8" fill="#cbd5e1">C</text>
+      {ln(330, top, 330, 72)}
+      <polyline points={`330,72 336,76 324,82 336,88 324,94 336,100 324,106 330,110`} fill="none" stroke={color} strokeWidth={W} strokeLinejoin="round"/>
+      {ln(330, 110, 330, bot)}
+      <text x="340" y="94" fontSize="8" fill="#cbd5e1">R</text>
+      <text x="344" y="60" fontSize="8" fill={color}>+</text>
+      <text x="344" y="142" fontSize="8" fill={color}>−</text>
+      <text x="34" y="172" {...ROTULO}>Rectificador trifásico controlado · filtro LC</text>
+    </HeroSvg>
   );
 }
 
-// Ilustración por categoría: cada artículo nuevo hereda la de su área.
+// Energía: generación (eólica y solar), transmisión, almacenamiento y consumo.
+function HeroEnergia({ color }) {
+  const torre = x => (
+    <g stroke={color} strokeWidth="1" fill="none" opacity=".85">
+      <path d={`M${x-12},140 L${x},60 L${x+12},140`}/>
+      <path d={`M${x-8},112 L${x+8},112 M${x-5},90 L${x+5},90 M${x-10},127 L${x+6},112 M${x+10},127 L${x-6},112`}/>
+      <path d={`M${x-18},72 L${x+18},72 M${x-14},82 L${x+14},82`}/>
+    </g>
+  );
+  return (
+    <HeroSvg fondo="#04160f">
+      {/* Aerogenerador */}
+      <line x1="56" y1="140" x2="56" y2="64" stroke={color} strokeWidth="2"/>
+      {[0,120,240].map(a => (
+        <path key={a} d="M56,64 q4,-12 0,-28 q-4,14 0,28" fill={color} fillOpacity=".5" stroke={color} strokeWidth=".8"
+          transform={`rotate(${a+20} 56 64)`}/>
+      ))}
+      <circle cx="56" cy="64" r="3" fill={color}/>
+      {/* Panel solar y sol */}
+      <circle cx="104" cy="58" r="7" fill="#fbbf24" opacity=".8"/>
+      <g transform="translate(86 112) skewX(-20)">
+        <rect width="34" height="20" fill={color} fillOpacity=".15" stroke={color} strokeWidth="1.1"/>
+        <path d="M11 0 V20 M22 0 V20 M0 10 H34" stroke={color} strokeWidth=".7"/>
+      </g>
+      <line x1="100" y1="132" x2="100" y2="140" stroke={color} strokeWidth="1.2"/>
+      {/* Líneas de transmisión */}
+      {torre(170)}{torre(238)}
+      {[72, 82].map(y => (
+        <g key={y}>
+          <path d={`M120,${y+30} Q140,${y+8} 152,${y}`} fill="none" stroke="#e2e8f0" strokeOpacity=".4" strokeWidth=".9"/>
+          <path d={`M188,${y} Q204,${y+10} 220,${y}`} fill="none" stroke="#e2e8f0" strokeOpacity=".4" strokeWidth=".9"/>
+          <path d={`M256,${y} Q276,${y+12} 296,${y+26}`} fill="none" stroke="#e2e8f0" strokeOpacity=".4" strokeWidth=".9"/>
+        </g>
+      ))}
+      {/* Consumo */}
+      <path d="M296,140 V112 L314,98 L332,112 V140 Z" fill={color} fillOpacity=".12" stroke={color} strokeWidth="1.2"/>
+      <rect x="309" y="124" width="10" height="16" fill="none" stroke={color} strokeWidth="1"/>
+      {/* Batería */}
+      <rect x="340" y="104" width="22" height="36" rx="3" fill="none" stroke={color} strokeWidth="1.3"/>
+      <rect x="346" y="100" width="10" height="4" rx="1" fill={color}/>
+      {[0,1,2].map(i => <rect key={i} x="344" y={130-i*10} width="14" height="7" rx="1" fill={color} opacity={.9-i*.25}/>)}
+      <line x1="30" y1="140" x2="370" y2="140" stroke="#fff" strokeOpacity=".15"/>
+      <text x="34" y="160" {...ROTULO}>Generación</text>
+      <text x="204" y="160" textAnchor="middle" {...ROTULO}>Transmisión</text>
+      <text x="366" y="160" textAnchor="end" {...ROTULO}>Consumo y almacenamiento</text>
+    </HeroSvg>
+  );
+}
+
+// Mecánica: transmisión de potencia en una máquina de izaje:
+// motor → piñón y corona (reductor) → tambor → carga.
+function HeroMecanica({ color }) {
+  const engrane = (cx, cy, r, dientes, giro=0) => {
+    const pts = [];
+    for (let i = 0; i < dientes*2; i++) {
+      const a = giro + (i*Math.PI)/dientes, rr = i % 2 ? r : r + 4.5, da = Math.PI/dientes*0.35;
+      pts.push(`${cx+Math.cos(a-da)*rr},${cy+Math.sin(a-da)*rr}`, `${cx+Math.cos(a+da)*rr},${cy+Math.sin(a+da)*rr}`);
+    }
+    return <polygon points={pts.join(" ")} fill={color} fillOpacity=".08" stroke={color} strokeWidth="1.3" strokeLinejoin="round"/>;
+  };
+  const giro = (cx, cy, r, a0, a1) => {               // flecha curva de rotación
+    const p = a => [cx + r*Math.cos(a), cy + r*Math.sin(a)];
+    const [x0, y0] = p(a0), [x1, y1] = p(a1);
+    return (
+      <g>
+        <path d={`M${x0},${y0} A${r},${r} 0 0 1 ${x1},${y1}`} fill="none" stroke="#e2e8f0" strokeOpacity=".7" strokeWidth="1"/>
+        <circle cx={x1} cy={y1} r="2" fill="#e2e8f0" opacity=".8"/>
+      </g>
+    );
+  };
+  const p = [112, 82], g = [164, 82];
+  return (
+    <HeroSvg fondo="#1a1206">
+      {/* Motor */}
+      <rect x="34" y="62" width="50" height="40" rx="4" fill={color} fillOpacity=".12" stroke={color} strokeWidth="1.3"/>
+      {[44, 52, 60, 68, 76].map(x => <line key={x} x1={x} y1="66" x2={x} y2="98" stroke={color} strokeOpacity=".4"/>)}
+      <rect x="42" y="102" width="34" height="6" fill={color} fillOpacity=".3"/>
+      <text x="59" y="122" textAnchor="middle" {...ROTULO}>motor</text>
+      <line x1="84" y1={p[1]} x2={p[0]} y2={p[1]} stroke={color} strokeWidth="3"/>
+      {/* Reductor: piñón y corona */}
+      {engrane(p[0], p[1], 13, 9, 0.2)}
+      {engrane(g[0], g[1], 33, 23, 0)}
+      <circle cx={p[0]} cy={p[1]} r="2.5" fill={color}/>
+      {/* Tambor solidario a la corona */}
+      <circle cx={g[0]} cy={g[1]} r="15" fill="#1a1206" stroke={color} strokeWidth="1.4"/>
+      <circle cx={g[0]} cy={g[1]} r="2.5" fill={color}/>
+      {giro(p[0], p[1], 22, -2.6, -1.2)}
+      <text x={p[0]-6} y={p[1]-26} fontSize="8" fill="#cbd5e1">ω₁</text>
+      {giro(g[0], g[1], 46, -1.9, -0.9)}
+      <text x={g[0]+26} y={g[1]-40} fontSize="8" fill="#cbd5e1">ω₂</text>
+      {/* Cable y carga */}
+      <line x1={g[0]+15} y1={g[1]} x2={g[0]+15} y2="128" stroke="#e2e8f0" strokeOpacity=".75" strokeWidth="1.1"/>
+      <rect x={g[0]+3} y="128" width="24" height="20" rx="2" fill={color} fillOpacity=".25" stroke={color} strokeWidth="1.3"/>
+      <text x={g[0]+15} y="141" textAnchor="middle" fontSize="8" fill={color}>m</text>
+      <line x1={g[0]+36} y1="132" x2={g[0]+36} y2="152" stroke={color} strokeWidth="1.2"/>
+      <path d={`M${g[0]+33},152 L${g[0]+36},158 L${g[0]+39},152 Z`} fill={color}/>
+      <text x={g[0]+42} y="148" fontSize="7.5" fill={color}>m·g</text>
+      {/* Relaciones */}
+      <g fontSize="9" fill="#cbd5e1">
+        <text x="252" y="70">i = z₂ / z₁</text>
+        <text x="252" y="92">P = τ · ω</text>
+        <text x="252" y="114">v = ω₂ · r</text>
+      </g>
+      <line x1="242" y1="58" x2="242" y2="120" stroke={color} strokeOpacity=".4"/>
+      <text x="34" y="172" {...ROTULO}>Transmisión de potencia · motor, reductor y tambor</text>
+    </HeroSvg>
+  );
+}
+
+// IA: robot móvil autónomo visto desde arriba. Percibe con un sensor láser,
+// planifica una ruta entre obstáculos y llega a su objetivo.
+function HeroIA({ color }) {
+  const r = [74, 98];
+  const rayos = Array.from({ length:9 }, (_, i) => -0.52 + i*0.13);
+  const gris = { fill:"#94a3b8", fillOpacity:.12, stroke:"#94a3b8", strokeOpacity:.5 };
+  return (
+    <HeroSvg fondo="#0d0a1e">
+      {[60, 100, 140, 180, 220, 260, 300, 340].map(x =>
+        <line key={x} x1={x} y1="20" x2={x} y2="160" stroke="#fff" strokeOpacity=".03"/>)}
+      {/* Obstáculos */}
+      <rect x="160" y="36" width="30" height="46" rx="3" {...gris}/>
+      <rect x="160" y="114" width="30" height="40" rx="3" {...gris}/>
+      <rect x="250" y="56" width="32" height="52" rx="3" {...gris}/>
+      {/* Barrido del sensor láser */}
+      {rayos.map((a, i) => {
+        const largo = Math.abs(a) > 0.25 ? (160 - r[0]) / Math.cos(a) : 82;
+        return <line key={i} x1={r[0]} y1={r[1]} x2={r[0]+Math.cos(a)*largo} y2={r[1]+Math.sin(a)*largo}
+          stroke={color} strokeOpacity=".3" strokeWidth="1"/>;
+      })}
+      {rayos.filter(a => Math.abs(a) > 0.25).map((a, i) =>
+        <circle key={i} cx="160" cy={r[1]+Math.tan(a)*(160-r[0])} r="2.4" fill={color}/>)}
+      {/* Ruta planificada */}
+      <path d="M98,98 C128,98 150,98 175,98 S 220,140 262,136 S 316,112 330,98"
+        fill="none" stroke={color} strokeWidth="1.6" strokeDasharray="5 3"/>
+      {/* Objetivo */}
+      <circle cx="336" cy="96" r="11" fill="none" stroke={color} strokeWidth="1.2" strokeOpacity=".6"/>
+      <circle cx="336" cy="96" r="6" fill="none" stroke={color} strokeWidth="1.3"/>
+      <circle cx="336" cy="96" r="2" fill={color}/>
+      {/* Robot (vista superior) */}
+      <rect x={r[0]-26} y={r[1]-21} width="10" height="7" rx="2" fill={color} opacity=".7"/>
+      <rect x={r[0]-26} y={r[1]+14} width="10" height="7" rx="2" fill={color} opacity=".7"/>
+      <rect x={r[0]-30} y={r[1]-15} width="36" height="30" rx="8" fill="#0d0a1e" stroke={color} strokeWidth="1.5"/>
+      <circle cx={r[0]} cy={r[1]} r="6" fill={color} fillOpacity=".25" stroke={color} strokeWidth="1.3"/>
+      <circle cx={r[0]} cy={r[1]} r="2" fill={color}/>
+      <text x="34" y="34" fontSize="9" fill="#cbd5e1">percibe · planifica · actúa</text>
+      <text x="34" y="172" {...ROTULO}>Robot móvil autónomo con sensor láser</text>
+    </HeroSvg>
+  );
+}
+
 const HERO_MAP = {
   "Electricidad":    HeroElectricidad,
   "Energía":         HeroEnergia,
@@ -556,7 +753,7 @@ function SectionBlock({ icon, title, children, T }) {
         </span>
         <span style={{ fontSize:13, fontWeight:600, color:T.text }}>{title}</span>
       </div>
-      <p style={{ ...TEXTO_LARGO, fontSize:12, color:T.sub, lineHeight:1.7, margin:0 }}>{children}</p>
+      <p style={{ ...TEXTO_LARGO, fontSize:12, color:T.sub, lineHeight:1.7, margin:0 }}>{conIndices(children)}</p>
     </div>
   );
 }
@@ -790,7 +987,7 @@ function ReadMode({ art, onClose, T }) {
       </div>
       <div style={{ flex:1, overflowY:"auto", padding:"20px 20px 32px", scrollbarWidth:"none" }}>
         <h1 style={{ fontSize:20, fontWeight:700, color:T.text, lineHeight:1.3, margin:"0 0 16px" }}>{art.title}</h1>
-        <p style={{ ...TEXTO_LARGO, fontSize:14, color:T.sub, lineHeight:1.75, marginBottom:20 }}>{art.description}</p>
+        <p style={{ ...TEXTO_LARGO, fontSize:14, color:T.sub, lineHeight:1.75, marginBottom:20 }}>{conIndices(art.description)}</p>
         {[
           { label:"Contexto técnico",  text:art.context },
           { label:"En detalle",        text:art.detail  },
@@ -801,7 +998,7 @@ function ReadMode({ art, onClose, T }) {
           <div key={label} style={{ marginBottom:20 }}>
             <p style={{ fontSize:11, fontWeight:700, color:T.accent, letterSpacing:1,
               marginBottom:6, textTransform:"uppercase" }}>{label}</p>
-            <p style={{ ...TEXTO_LARGO, fontSize:14, color:T.sub, lineHeight:1.75, margin:0 }}>{text}</p>
+            <p style={{ ...TEXTO_LARGO, fontSize:14, color:T.sub, lineHeight:1.75, margin:0 }}>{conIndices(text)}</p>
           </div>
         ))}
         <div style={{ marginTop:24, paddingTop:16, borderTop:`1px solid ${T.border}` }}>
@@ -810,6 +1007,242 @@ function ReadMode({ art, onClose, T }) {
           {art.sources.map(s => <p key={s} style={{ fontSize:12, color:T.muted, margin:"0 0 4px" }}>· {s}</p>)}
           <div style={{ marginTop:14 }}><AvisoReferencial T={T}/></div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════
+// ETAPA DE PRUEBA · aviso, comentarios, encuesta y cierre
+// Las fechas viven aquí. Para otra etapa, cambiar solo PRUEBA.
+// ═══════════════════════════════════════════════════
+const PRUEBA = {
+  inicio:       "2026-10-05",  // aviso de prueba y comentarios desde este día
+  fin:          "2026-10-18",  // último día del aviso
+  encuesta:     "2026-10-19",  // encuesta de cierre desde este día
+  cierreHasta:  "2026-10-31",  // último día de la encuesta y del mensaje de cierre
+};
+// Los comentarios siguen abiertos después de la prueba (piloto de noviembre).
+const COMENTARIOS_DESDE = PRUEBA.inicio;
+const MAX_COMENTARIO = 500;
+const MAX_COMENTARIO_ENCUESTA = 300;
+
+// "antes" | "prueba" | "encuesta" | "despues"
+function faseDe(hoy) {
+  if (hoy < PRUEBA.inicio)      return "antes";
+  if (hoy <= PRUEBA.fin)        return "prueba";
+  if (hoy <= PRUEBA.cierreHasta) return "encuesta";
+  return "despues";
+}
+
+const ASPECTOS_ENCUESTA = [
+  { key:"diseno",    titulo:"Diseño",            ayuda:"cómo se ve la app" },
+  { key:"contenido", titulo:"Contenido",         ayuda:"utilidad de los artículos" },
+  { key:"claridad",  titulo:"Claridad",          ayuda:"qué tan fácil de entender" },
+  { key:"fluidez",   titulo:"Fluidez",           ayuda:"rapidez, que no se trabe" },
+  { key:"facilidad", titulo:"Facilidad de uso",  ayuda:"encontrar lo que buscas" },
+  { key:"aviso",     titulo:"Aviso diario",      ayuda:"notificación de cada mañana", noUso:true },
+];
+const NIVELES_ENCUESTA = [
+  { key:"muy-malo",  label:"Muy malo" },
+  { key:"malo",      label:"Malo" },
+  { key:"bueno",     label:"Bueno" },
+  { key:"muy-bueno", label:"Muy bueno" },
+];
+
+async function enviarOpinion(ruta, datos) {
+  const r = await fetch(ruta, {
+    method:"POST", headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ ...datos, simulada: !!FECHA_SIMULADA, fecha: hoyKey() }),
+  });
+  if (!r.ok) {
+    let msg = "No se pudo enviar. Intenta de nuevo.";
+    try { const j = await r.json(); if (j?.error && r.status === 400) msg = j.error; } catch {}
+    throw new Error(msg);
+  }
+}
+
+// Franja visible solo al probar con ?simular.
+function BannerSimulacion({ T }) {
+  if (!FECHA_SIMULADA) return null;
+  return (
+    <div style={{ background:"#7c3aed", color:"#fff", fontSize:10.5, fontWeight:600,
+      textAlign:"center", padding:"4px 8px", flexShrink:0 }}>
+      Simulando el {FECHA_SIMULADA} · lo que envíes va a la base de prueba
+    </div>
+  );
+}
+
+function TarjetaPrueba({ T, titulo, children, icono="🧪" }) {
+  return (
+    <div style={{ borderRadius:20, border:`1px solid ${T.accent}55`, background:T.accentBg,
+      padding:"13px 15px", display:"flex", gap:11, alignItems:"flex-start" }}>
+      <span style={{ fontSize:20, lineHeight:1 }} aria-hidden>{icono}</span>
+      <div style={{ flex:1 }}>
+        <p style={{ fontSize:13, fontWeight:700, color:T.text, margin:"0 0 4px" }}>{titulo}</p>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// Lo que se muestra arriba del artículo según la fase de la prueba.
+function AvisoEtapa({ T, state, onAbrirEncuesta }) {
+  const fase = faseDe(hoyKey());
+  const p = { fontSize:12, color:T.sub, lineHeight:1.55, margin:"0 0 3px" };
+  if (fase === "prueba") return (
+    <TarjetaPrueba T={T} titulo="Estás en la etapa de prueba. ¡Gracias por ayudarnos!">
+      <p style={p}>Al final de cada artículo puedes dejarnos un comentario.</p>
+      <p style={{ ...p, margin:0 }}>El 19 de octubre te pediremos una breve encuesta de 1 minuto sobre tu experiencia.</p>
+    </TarjetaPrueba>
+  );
+  if (fase === "encuesta" && !state.encuestaEnviada) return (
+    <TarjetaPrueba T={T} titulo="Terminó la etapa de prueba" icono="📝">
+      <p style={{ ...p, marginBottom:10 }}>¿Nos cuentas cómo te fue? Es una encuesta anónima de 1 minuto.</p>
+      <PressBtn onClick={onAbrirEncuesta}
+        style={{ background:T.accent, color:"#fff", border:"none", borderRadius:12, padding:"9px 14px",
+          fontFamily:FONT, fontSize:12.5, fontWeight:700, cursor:"pointer" }}>
+        Responder la encuesta
+      </PressBtn>
+    </TarjetaPrueba>
+  );
+  if (fase === "encuesta") return (
+    <TarjetaPrueba T={T} titulo="Terminó el período de prueba. ¡Gracias por participar!" icono="🙌">
+      <p style={{ ...p, margin:0 }}>Estamos haciendo ajustes con sus comentarios. Muy pronto IngenieDía estará disponible para todos.</p>
+    </TarjetaPrueba>
+  );
+  return null;
+}
+
+// Al final del artículo del día. Anónimo, uno por día (lo controla el teléfono).
+function Comentarios({ T, art, fecha, state, setState }) {
+  const hoy = hoyKey();
+  const [texto, setTexto]     = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError]     = useState("");
+  if (fecha !== hoy || hoy < COMENTARIOS_DESDE) return null;
+  const yaEnvio = state.comentarioDia === hoy;
+
+  async function enviar() {
+    const t = texto.trim();
+    if (!t || enviando) return;
+    setEnviando(true); setError("");
+    try {
+      await enviarOpinion("/api/comentarios", { texto:t, articulo:fecha, titulo:art.title });
+      setState(s => ({ ...s, comentarioDia: hoy }));
+      setTexto("");
+    } catch (e) { setError(e.message); }
+    setEnviando(false);
+  }
+
+  return (
+    <Card T={T} title="Comentarios" icon={<Ic.Mail/>}>
+      {yaEnvio ? (
+        <p style={{ fontSize:12.5, color:T.sub, lineHeight:1.6, margin:0 }}>
+          <strong style={{ color:T.text }}>¡Gracias! Recibimos tu comentario.</strong> Mañana puedes enviar otro.
+        </p>
+      ) : (
+        <>
+          <label htmlFor="comentario-dia" style={{ display:"block", fontSize:12, color:T.sub, lineHeight:1.55, marginBottom:8 }}>
+            ¿Algún comentario sobre el artículo, o un tema sobre el que te gustaría leer?
+          </label>
+          <textarea id="comentario-dia" value={texto} maxLength={MAX_COMENTARIO} rows={4}
+            onChange={e => setTexto(e.target.value)}
+            style={{ width:"100%", boxSizing:"border-box", resize:"vertical", minHeight:84,
+              background:T.inputBg, color:T.text, border:`1px solid ${T.border}`, borderRadius:12,
+              padding:"10px 12px", fontFamily:FONT, fontSize:13, lineHeight:1.5, outline:"none" }}/>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", margin:"6px 0 10px" }}>
+            <span style={{ fontSize:10.5, color:T.muted }}>Es anónimo: no guardamos tu nombre ni tu correo.</span>
+            <span style={{ fontSize:10.5, color:T.muted, flexShrink:0, marginLeft:8 }}>{texto.length}/{MAX_COMENTARIO}</span>
+          </div>
+          {error && <p role="alert" style={{ fontSize:11.5, color:T.danger, margin:"0 0 8px" }}>{error}</p>}
+          <PressBtn onClick={enviar} disabled={!texto.trim() || enviando}
+            style={{ width:"100%", background: texto.trim() ? T.accent : T.pill,
+              color: texto.trim() ? "#fff" : T.muted, border:"none", borderRadius:12, padding:"10px 14px",
+              fontFamily:FONT, fontSize:13, fontWeight:700, cursor: texto.trim() ? "pointer" : "default" }}>
+            {enviando ? "Enviando…" : "Enviar"}
+          </PressBtn>
+        </>
+      )}
+    </Card>
+  );
+}
+
+// Encuesta de cierre: una sola pantalla, menos de 1 minuto. Se cierra con la X.
+function EncuestaCierre({ T, onCerrar, onEnviada }) {
+  const [resp, setResp]         = useState({});
+  const [comentario, setComentario] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError]       = useState("");
+  const completa = ASPECTOS_ENCUESTA.every(a => resp[a.key]);
+
+  async function enviar() {
+    if (!completa || enviando) return;
+    setEnviando(true); setError("");
+    try {
+      await enviarOpinion("/api/encuesta", { respuestas:resp, comentario:comentario.trim() });
+      onEnviada();
+    } catch (e) { setError(e.message); setEnviando(false); }
+  }
+
+  const opcion = (aspecto, key, label) => {
+    const sel = resp[aspecto] === key;
+    return (
+      <button key={key} onClick={() => setResp(r => ({ ...r, [aspecto]:key }))}
+        aria-pressed={sel}
+        style={{ flex:"1 1 0", minWidth:0, padding:"7px 2px", borderRadius:10, cursor:"pointer",
+          fontFamily:FONT, fontSize:10.5, fontWeight: sel ? 700 : 500, lineHeight:1.2,
+          border:`1px solid ${sel ? T.accent : T.border}`, background: sel ? T.accentBg : T.card,
+          color: sel ? T.accent : T.sub }}>
+        {label}
+      </button>
+    );
+  };
+
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Encuesta de cierre"
+      style={{ position:"absolute", inset:0, zIndex:60, background:"rgba(2,6,23,0.55)",
+        display:"flex", alignItems:"flex-end" }}>
+      <div style={{ width:"100%", maxHeight:"92%", overflowY:"auto", background:T.bg,
+        borderRadius:"22px 22px 0 0", padding:"16px 16px 20px", boxSizing:"border-box", fontFamily:FONT }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10, marginBottom:4 }}>
+          <p style={{ fontSize:16, fontWeight:700, color:T.text, margin:0 }}>¿Cómo te fue con IngenieDía?</p>
+          <button onClick={onCerrar} aria-label="Cerrar"
+            style={{ background:T.pill, border:`1px solid ${T.border}`, borderRadius:10, width:30, height:30,
+              color:T.sub, cursor:"pointer", fontSize:16, lineHeight:1, flexShrink:0 }}>✕</button>
+        </div>
+        <p style={{ fontSize:11.5, color:T.muted, margin:"0 0 14px" }}>Anónima · menos de 1 minuto</p>
+
+        {ASPECTOS_ENCUESTA.map(a => (
+          <div key={a.key} style={{ marginBottom:12 }}>
+            <p style={{ fontSize:12.5, color:T.text, fontWeight:600, margin:"0 0 6px" }}>
+              {a.titulo} <span style={{ fontWeight:400, color:T.muted }}>· {a.ayuda}</span>
+            </p>
+            <div style={{ display:"flex", gap:5 }}>
+              {NIVELES_ENCUESTA.map(n => opcion(a.key, n.key, n.label))}
+              {a.noUso && opcion(a.key, "no-lo-use", "No lo usé")}
+            </div>
+          </div>
+        ))}
+
+        <label htmlFor="encuesta-comentario" style={{ display:"block", fontSize:12.5, color:T.text, fontWeight:600, margin:"4px 0 6px" }}>
+          ¿Algo más que quieras contarnos? <span style={{ fontWeight:400, color:T.muted }}>(opcional)</span>
+        </label>
+        <textarea id="encuesta-comentario" value={comentario} maxLength={MAX_COMENTARIO_ENCUESTA} rows={3}
+          onChange={e => setComentario(e.target.value)}
+          style={{ width:"100%", boxSizing:"border-box", resize:"vertical", background:T.inputBg, color:T.text,
+            border:`1px solid ${T.border}`, borderRadius:12, padding:"9px 11px", fontFamily:FONT, fontSize:13, outline:"none" }}/>
+        <p style={{ fontSize:10.5, color:T.muted, textAlign:"right", margin:"4px 0 10px" }}>
+          {comentario.length}/{MAX_COMENTARIO_ENCUESTA}
+        </p>
+
+        {error && <p role="alert" style={{ fontSize:11.5, color:T.danger, margin:"0 0 8px" }}>{error}</p>}
+        <PressBtn onClick={enviar} disabled={!completa || enviando}
+          style={{ width:"100%", background: completa ? T.accent : T.pill, color: completa ? "#fff" : T.muted,
+            border:"none", borderRadius:12, padding:"11px 14px", fontFamily:FONT, fontSize:13.5, fontWeight:700,
+            cursor: completa ? "pointer" : "default" }}>
+          {enviando ? "Enviando…" : completa ? "Enviar respuestas" : "Responde los 6 aspectos para enviar"}
+        </PressBtn>
       </div>
     </div>
   );
@@ -854,7 +1287,7 @@ function TodayView({ state, setState, T, showToast, scrollRef, articulos }) {
   }, [key, isRead]);
 
   async function handleShare() {
-    const text = `${art.title}\n\n${art.description}\n\n${art.keyConcepts}`;
+    const text = sinMarcas(`${art.title}\n\n${art.description}\n\n${art.keyConcepts}`);
     try {
       if (navigator?.share)          { await navigator.share({ title:art.title, text }); showToast("¡Compartido!"); }
       else if (navigator?.clipboard) { await navigator.clipboard.writeText(text); showToast("Copiado al portapapeles"); }
@@ -886,17 +1319,6 @@ function TodayView({ state, setState, T, showToast, scrollRef, articulos }) {
               : <span style={{ position:"absolute", top:"50%", left:"50%",
                   transform:"translate(-50%,-50%)", fontSize:64, opacity:.4 }}>?</span>
             }
-            {/* Gradient overlay */}
-            <div style={{ position:"absolute", bottom:0, left:0, right:0,
-              background:"linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.2) 60%, transparent 100%)",
-              padding:"12px 16px" }}>
-              <p style={{ fontSize:10, color:T.accent, fontWeight:700, letterSpacing:1, marginBottom:3 }}>
-                HOY EN INGENIEDÍA
-              </p>
-              <h2 style={{ fontSize:17, fontWeight:700, color:"#fff", lineHeight:1.3, margin:0 }}>
-                {art.title}
-              </h2>
-            </div>
             {/* Read-mode expand button */}
             <button onClick={() => setReadMode(true)}
               style={{ position:"absolute", top:10, right:10,
@@ -916,6 +1338,13 @@ function TodayView({ state, setState, T, showToast, scrollRef, articulos }) {
           </div>
 
           <div style={{ padding:"12px 16px" }}>
+            {/* Título bajo la imagen, para que no la tape */}
+            <p style={{ fontSize:10, color:T.accent, fontWeight:700, letterSpacing:1, margin:"0 0 3px" }}>
+              HOY EN INGENIEDÍA
+            </p>
+            <h2 style={{ fontSize:17, fontWeight:700, color:T.text, lineHeight:1.3, margin:"0 0 10px" }}>
+              {art.title}
+            </h2>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
               <span style={{ fontSize:11, color:T.muted, display:"flex", alignItems:"center", gap:4 }}>
                 <Ic.Clock/> {art.readingMin} min de lectura
@@ -926,7 +1355,7 @@ function TodayView({ state, setState, T, showToast, scrollRef, articulos }) {
                 {art.shortCategory}
               </span>
             </div>
-            <p style={{ ...TEXTO_LARGO, fontSize:12, color:T.sub, lineHeight:1.7, marginBottom:12 }}>{art.description}</p>
+            <p style={{ ...TEXTO_LARGO, fontSize:12, color:T.sub, lineHeight:1.7, marginBottom:12 }}>{conIndices(art.description)}</p>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <div style={{ display:"flex", gap:7 }}>
                 <IBtn active={liked}    label="Me gusta"    T={T} onClick={() => setState(s => applyReaction(s,key,"like"))}><Ic.ThumbUp/></IBtn>
@@ -961,6 +1390,8 @@ function TodayView({ state, setState, T, showToast, scrollRef, articulos }) {
           </div>
           <AvisoReferencial T={T}/>
         </div>
+
+        <Comentarios T={T} art={art} fecha={key} state={state} setState={setState}/>
       </div>
     </>
   );
@@ -1942,6 +2373,8 @@ export default function App() {
   const [avisos,    setAvisos]    = useState([]);
   const [revision,  setRevision]  = useState(
     typeof window !== "undefined" && window.location.hash === "#revision");
+  const [encuestaAbierta, setEncuestaAbierta] = useState(false);
+  const encuestaMostrada     = useRef(false);
   const esMovil              = useEsMovil();
   const scrollRef            = useRef(null);
   const toast                = useToast();
@@ -1973,6 +2406,16 @@ export default function App() {
     storeHydrate(DEFAULT_STATE).then(s => { setStateRaw({ ...s, selectedKey: hoyKey() }); setReady(true); });
   }, []);
 
+  // Encuesta de cierre: aparece sola una vez por apertura de la app,
+  // mientras no se haya respondido. Se puede cerrar con la X.
+  useEffect(() => {
+    if (!ready || !state.onboardingDone || encuestaMostrada.current) return;
+    if (faseDe(hoyKey()) === "encuesta" && !state.encuestaEnviada) {
+      encuestaMostrada.current = true;
+      setEncuestaAbierta(true);
+    }
+  }, [ready, state.onboardingDone, state.encuestaEnviada]);
+
   // Fondo de la página y barra del teléfono con el color del tema,
   // para que no quede un marco de otro color alrededor de la app.
   useEffect(() => {
@@ -2001,7 +2444,15 @@ export default function App() {
     switch (state.tab) {
       case "archive": return <ArchiveView {...props}/>;
       case "profile": return <ProfileView {...props}/>;
-      default:        return <TodayView   {...props} scrollRef={scrollRef}/>;
+      default: {
+        const aviso = <AvisoEtapa T={T} state={state} onAbrirEncuesta={() => setEncuestaAbierta(true)}/>;
+        return (
+          <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+            {aviso}
+            <TodayView {...props} scrollRef={scrollRef}/>
+          </div>
+        );
+      }
     }
   }
 
@@ -2036,8 +2487,20 @@ export default function App() {
         {ready && !state.onboardingDone &&
           <Onboarding onDone={() => setState(s=>({...s,onboardingDone:true}))} T={T}/>}
 
+        {/* Encuesta de cierre de la etapa de prueba */}
+        {encuestaAbierta && (
+          <EncuestaCierre T={T} onCerrar={() => setEncuestaAbierta(false)}
+            onEnviada={() => {
+              setState(s => ({ ...s, encuestaEnviada:true }));
+              setEncuestaAbierta(false);
+              toast.show("¡Gracias por responder!");
+            }}/>
+        )}
+
         {/* Toast */}
         <Toast message={toast.msg} visible={toast.vis}/>
+
+        <BannerSimulacion T={T}/>
 
         {/* Barra superior. En móvil no se simula hora ni batería:
             el teléfono ya tiene las suyas. Solo se conserva la racha. */}

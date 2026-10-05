@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0b0f1a">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+<title>Resultados · IngenieDía</title>
+<style>
+  :root { --bg:#0b0f1a; --card:#131c2e; --texto:#e2e8f0; --suave:#94a3b8; --acento:#22d3ee;
+          --borde:rgba(148,163,184,.15); --barra:rgba(34,211,238,.18); --peligro:#f87171; --sim:#a78bfa; }
+  @media (prefers-color-scheme: light) {
+    :root { --bg:#f8fafc; --card:#ffffff; --texto:#0f172a; --suave:#475569; --acento:#0891b2;
+            --borde:rgba(0,0,0,.08); --barra:rgba(8,145,178,.14); --peligro:#dc2626; --sim:#7c3aed; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--texto);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; line-height:1.55; }
+  main { max-width:860px; margin:0 auto; padding:24px 16px 56px; }
+  .marca { color:var(--acento); font-weight:700; font-size:14px; letter-spacing:.5px; margin:0 0 4px; }
+  h1 { font-size:24px; line-height:1.25; margin:0 0 4px; }
+  .sub { color:var(--suave); font-size:13px; margin:0 0 20px; }
+  h2 { font-size:17px; margin:0 0 4px; }
+  .tarjeta { background:var(--card); border:1px solid var(--borde); border-radius:14px; padding:16px 18px; margin:0 0 16px; }
+  .fila { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  input[type=password] { flex:1 1 200px; min-width:0; padding:10px 12px; border-radius:10px; border:1px solid var(--borde);
+    background:var(--bg); color:var(--texto); font-size:15px; }
+  button { padding:9px 14px; border-radius:10px; border:1px solid var(--borde); background:var(--card);
+    color:var(--texto); font-size:14px; cursor:pointer; font-family:inherit; }
+  button.principal { background:var(--acento); border-color:var(--acento); color:#fff; font-weight:700; }
+  button.peligro { color:var(--peligro); }
+  label.check { display:flex; gap:6px; align-items:center; font-size:14px; color:var(--suave); cursor:pointer; }
+  .error { color:var(--peligro); font-size:14px; margin:8px 0 0; }
+  .aviso-sim { display:none; color:var(--sim); font-weight:600; font-size:13px; margin:0 0 12px; }
+  body.simulada .aviso-sim { display:block; }
+  .cifra { font-size:13px; color:var(--suave); margin:0 0 12px; }
+  .tabla { width:100%; overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; min-width:520px; font-size:13.5px; }
+  th, td { padding:7px 6px; border-bottom:1px solid var(--borde); text-align:center; }
+  th:first-child, td:first-child { text-align:left; }
+  th { color:var(--suave); font-weight:600; font-size:12.5px; }
+  td.n { position:relative; font-variant-numeric:tabular-nums; }
+  td.n span.b { position:absolute; left:4px; right:4px; bottom:4px; height:4px; border-radius:2px; background:var(--barra); }
+  td.n span.b i { display:block; height:100%; border-radius:2px; background:var(--acento); }
+  ul.lista { list-style:none; padding:0; margin:0; }
+  ul.lista li { border-top:1px solid var(--borde); padding:10px 0; }
+  ul.lista li:first-child { border-top:none; }
+  .meta { font-size:12px; color:var(--suave); margin:0 0 3px; }
+  .texto { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; font-size:14.5px; }
+  .vacio { color:var(--suave); font-size:14px; margin:0; }
+  #datos { display:none; }
+  body.dentro #datos { display:block; }
+  body.dentro #acceso { display:none; }
+</style>
+</head>
+<body>
+<main>
+  <p class="marca">⚡ IngenieDía</p>
+  <h1>Resultados de la etapa de prueba</h1>
+  <p class="sub">Página privada del docente. Todo lo que se muestra es anónimo.</p>
+
+  <section class="tarjeta" id="acceso">
+    <h2>Clave de acceso</h2>
+    <p class="cifra">La que guardaste en Vercel como <code>CLAVE_DOCENTE</code>.</p>
+    <form class="fila" id="form-clave">
+      <input type="password" id="clave" autocomplete="current-password" placeholder="Clave" required>
+      <button class="principal" type="submit">Entrar</button>
+    </form>
+    <p class="error" id="error-clave" hidden></p>
+  </section>
+
+  <div id="datos">
+    <section class="tarjeta">
+      <div class="fila" style="justify-content:space-between">
+        <label class="check"><input type="checkbox" id="ver-sim"> Ver datos de prueba (enviados con <code>?simular</code>)</label>
+        <div class="fila">
+          <button id="recargar">Actualizar</button>
+          <button id="csv">Descargar CSV</button>
+          <button id="borrar-sim" class="peligro" hidden>Borrar datos de prueba</button>
+          <button id="salir">Salir</button>
+        </div>
+      </div>
+      <p class="error" id="error-datos" hidden></p>
+    </section>
+
+    <p class="aviso-sim">Estás viendo datos de prueba, no los de los probadores.</p>
+
+    <section class="tarjeta">
+      <h2>Comentarios diarios</h2>
+      <p class="cifra" id="cifra-com"></p>
+      <ul class="lista" id="lista-com"></ul>
+    </section>
+
+    <section class="tarjeta">
+      <h2>Encuesta de cierre</h2>
+      <p class="cifra" id="cifra-enc"></p>
+      <div class="tabla"><table id="tabla-enc"></table></div>
+      <h2 style="margin-top:18px; font-size:15px">Comentarios de la encuesta</h2>
+      <ul class="lista" id="lista-enc"></ul>
+    </section>
+  </div>
+</main>
+
+<script>
+(() => {
+  const ASPECTOS = [["diseno","Diseño"],["contenido","Contenido"],["claridad","Claridad"],
+                    ["fluidez","Fluidez"],["facilidad","Facilidad de uso"],["aviso","Aviso diario"]];
+  const NIVELES = [["muy-malo","Muy malo"],["malo","Malo"],["bueno","Bueno"],["muy-bueno","Muy bueno"],["no-lo-use","No lo usé"]];
+  const $ = id => document.getElementById(id);
+  let clave = "";
+  try { clave = sessionStorage.getItem("ingeniedia-clave") || ""; } catch {}
+  let ultimo = null;
+
+  function el(tag, props = {}, ...hijos) {
+    const e = document.createElement(tag);
+    Object.assign(e, props);
+    hijos.forEach(h => e.append(h));
+    return e;
+  }
+  function mostrarError(id, msg) { const e = $(id); e.textContent = msg || ""; e.hidden = !msg; }
+  const fechaBonita = f => { const [y,m,d] = (f || "").split("-"); return d ? `${d}-${m}-${y}` : (f || "—"); };
+
+  async function cargar() {
+    const sim = $("ver-sim").checked;
+    document.body.classList.toggle("simulada", sim);
+    $("borrar-sim").hidden = !sim;
+    mostrarError("error-datos", "");
+    const r = await fetch("/api/resultados" + (sim ? "?simulada=1" : ""), { headers:{ "x-clave": clave }, cache:"no-store" });
+    const j = await r.json().catch(() => ({}));
+    if (r.status === 401) { salir(); mostrarError("error-clave", "Clave incorrecta."); return; }
+    if (!r.ok) { mostrarError("error-datos", j.error || "No se pudieron cargar los datos."); return; }
+    try { sessionStorage.setItem("ingeniedia-clave", clave); } catch {}
+    document.body.classList.add("dentro");
+    ultimo = j;
+    pintar(j);
+  }
+
+  function pintar(j) {
+    // Comentarios diarios
+    const com = j.comentarios || [];
+    $("cifra-com").textContent = com.length === 1 ? "1 comentario recibido." : `${com.length} comentarios recibidos.`;
+    const lc = $("lista-com"); lc.replaceChildren();
+    if (!com.length) lc.append(el("li", {}, el("p", { className:"vacio", textContent:"Aún no hay comentarios." })));
+    com.forEach(c => lc.append(el("li", {},
+      el("p", { className:"meta", textContent:`${fechaBonita(c.fecha)} · ${c.titulo || "artículo del " + fechaBonita(c.articulo)}` }),
+      el("p", { className:"texto", textContent:c.texto }))));
+
+    // Encuesta
+    const enc = j.encuesta || { total:0, conteos:{}, comentarios:[] };
+    $("cifra-enc").textContent = enc.total === 1 ? "1 respuesta." : `${enc.total} respuestas.`;
+    const t = $("tabla-enc"); t.replaceChildren();
+    const cab = el("tr", {}, el("th", { textContent:"Aspecto" }));
+    NIVELES.forEach(([, n]) => cab.append(el("th", { textContent:n })));
+    t.append(el("thead", {}, cab));
+    const cuerpo = el("tbody");
+    ASPECTOS.forEach(([k, nombre]) => {
+      const fila = el("tr", {}, el("td", { textContent:nombre }));
+      const c = enc.conteos[k] || {};
+      NIVELES.forEach(([nk]) => {
+        if (nk === "no-lo-use" && k !== "aviso") { fila.append(el("td", { textContent:"—" })); return; }
+        const v = c[nk] || 0;
+        const pct = enc.total ? Math.round(v / enc.total * 100) : 0;
+        const barra = el("span", { className:"b" }, el("i"));
+        barra.firstChild.style.width = pct + "%";
+        fila.append(el("td", { className:"n", textContent: enc.total ? `${v} (${pct} %)` : "0" }, barra));
+      });
+      cuerpo.append(fila);
+    });
+    t.append(cuerpo);
+    const le = $("lista-enc"); le.replaceChildren();
+    if (!enc.comentarios.length) le.append(el("li", {}, el("p", { className:"vacio", textContent:"Sin comentarios en la encuesta." })));
+    enc.comentarios.forEach(c => le.append(el("li", {},
+      el("p", { className:"meta", textContent:fechaBonita(c.fecha) }),
+      el("p", { className:"texto", textContent:c.texto }))));
+  }
+
+  function csv() {
+    if (!ultimo) return;
+    const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const filas = [["tipo","fecha","articulo","titulo","texto"]];
+    (ultimo.comentarios || []).forEach(c => filas.push(["comentario", c.fecha, c.articulo, c.titulo, c.texto]));
+    (ultimo.encuesta?.comentarios || []).forEach(c => filas.push(["comentario-encuesta", c.fecha, "", "", c.texto]));
+    const texto = "﻿" + filas.map(f => f.map(q).join(";")).join("\r\n");
+    const a = el("a", { href: URL.createObjectURL(new Blob([texto], { type:"text/csv;charset=utf-8" })),
+      download: `ingeniedia-comentarios${ultimo.simulada ? "-prueba" : ""}.csv` });
+    document.body.append(a); a.click(); a.remove();
+  }
+
+  function salir() {
+    clave = ""; try { sessionStorage.removeItem("ingeniedia-clave"); } catch {}
+    document.body.classList.remove("dentro"); $("clave").value = "";
+  }
+
+  $("form-clave").addEventListener("submit", e => {
+    e.preventDefault(); clave = $("clave").value; mostrarError("error-clave", ""); cargar();
+  });
+  $("ver-sim").addEventListener("change", cargar);
+  $("recargar").addEventListener("click", cargar);
+  $("csv").addEventListener("click", csv);
+  $("salir").addEventListener("click", salir);
+  $("borrar-sim").addEventListener("click", async () => {
+    if (!confirm("¿Borrar todos los datos de prueba (simulados)? Los de los probadores no se tocan.")) return;
+    const r = await fetch("/api/resultados?simulada=1", { method:"DELETE", headers:{ "x-clave": clave } });
+    if (!r.ok) { const j = await r.json().catch(() => ({})); mostrarError("error-datos", j.error || "No se pudo borrar."); return; }
+    cargar();
+  });
+  if (clave) cargar();
+})();
+</script>
+</body>
+</html>
