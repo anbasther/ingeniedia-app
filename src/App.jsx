@@ -45,7 +45,7 @@ const hoyKey = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 };
-const APP_VERSION = "0.5.0";
+const APP_VERSION = "0.6.0";
 const CORREO_CONTACTO = "anbasther@gmail.com";
 
 // Aviso que acompaña a cada artículo. El texto completo está en /terminos.
@@ -219,15 +219,36 @@ const applyReaction = (state,key,dir) => {
   return { ...state, [hit]:toggleArr(state[hit],key), [miss]:state[miss].filter(x=>x!==key) };
 };
 
+function ayerDe(fechaKey) {
+  const [y,m,d] = fechaKey.split("-").map(Number);
+  const dt = new Date(y,m-1,d); dt.setDate(dt.getDate()-1);
+  return toKey(dt.getFullYear(), dt.getMonth(), dt.getDate());
+}
+
+// Suma el día de hoy a la racha (si ayer también se contó) o la reinicia en 1.
 function computeStreak(state) {
   const hoy = hoyKey();
   if (state.lastReadDate === hoy) return state;
-  const [y,m,d] = hoy.split("-").map(Number);
-  const dt = new Date(y,m-1,d); dt.setDate(dt.getDate()-1);
-  const yesterday = toKey(dt.getFullYear(), dt.getMonth(), dt.getDate());
-  const streak = state.lastReadDate === yesterday ? state.streakCount + 1 : 1;
+  const streak = state.lastReadDate === ayerDe(hoy) ? (state.streakCount || 0) + 1 : 1;
   return { ...state, streakCount:streak, lastReadDate:hoy };
 }
+
+// Al abrir o volver a la app: si el último día contado no es hoy ni ayer,
+// la racha ya se cortó y se muestra en 0 (antes seguía mostrando el número viejo).
+function rachaVigente(state) {
+  const hoy = hoyKey();
+  if (!state.lastReadDate || state.lastReadDate === hoy || state.lastReadDate === ayerDe(hoy)) return state;
+  return state.streakCount ? { ...state, streakCount:0 } : state;
+}
+
+// Racha: el artículo de HOY cuenta cuando se cumplen DOS condiciones a la vez:
+//   1) llegar al final (80 % del desplazamiento, o el texto cabe entero en pantalla), y
+//   2) permanecer en él al menos la mitad de su tiempo de lectura, en tiempo SEGUIDO.
+// Si la app pasa a segundo plano o se cambia de artículo, el tiempo vuelve a cero.
+const MIN_FINAL = 0.8;
+const llegoAlFinal = el => !!el &&
+  (el.scrollHeight <= el.clientHeight + 4 || (el.scrollTop + el.clientHeight) / el.scrollHeight >= MIN_FINAL);
+const umbralRachaMs = art => Math.max(1, Number(art?.readingMin) || 2) * 60000 / 2;
 
 // ═══════════════════════════════════════════════════
 // THEME
@@ -969,7 +990,11 @@ function HeaderCalendar({ state, setState, T, articulos, onVerMes }) {
 // ═══════════════════════════════════════════════════
 // READ MODE (fullscreen distraction-free)
 // ═══════════════════════════════════════════════════
-function ReadMode({ art, onClose, T }) {
+function ReadMode({ art, onClose, onFin, T }) {
+  // También cuenta llegar al final leyendo en pantalla completa.
+  const ref = useRef(null);
+  const revisar = () => { if (llegoAlFinal(ref.current)) onFin?.(); };
+  useEffect(() => { revisar(); }, []);
   return (
     <div style={{ position:"absolute", inset:0, zIndex:200, background:T.bg,
       display:"flex", flexDirection:"column", overflow:"hidden" }}>
@@ -985,7 +1010,7 @@ function ReadMode({ art, onClose, T }) {
           <Ic.Shrink s={14}/>
         </PressBtn>
       </div>
-      <div style={{ flex:1, overflowY:"auto", padding:"20px 20px 32px", scrollbarWidth:"none" }}>
+      <div ref={ref} onScroll={revisar} style={{ flex:1, overflowY:"auto", padding:"20px 20px 32px", scrollbarWidth:"none" }}>
         <h1 style={{ fontSize:20, fontWeight:700, color:T.text, lineHeight:1.3, margin:"0 0 16px" }}>{art.title}</h1>
         <p style={{ ...TEXTO_LARGO, fontSize:14, color:T.sub, lineHeight:1.75, marginBottom:20 }}>{conIndices(art.description)}</p>
         {[
@@ -1020,7 +1045,8 @@ const PRUEBA = {
   inicio:       "2026-10-05",  // aviso de prueba y comentarios desde este día
   fin:          "2026-10-18",  // último día del aviso
   encuesta:     "2026-10-19",  // encuesta de cierre desde este día
-  cierreHasta:  "2026-10-31",  // último día de la encuesta y del mensaje de cierre
+  encuestaHasta:"2026-10-31",  // último día de la encuesta
+  cierreHasta:  "2026-11-30",  // último día de la tarjeta de la prueba extendida (seguir inscrito, invitar)
 };
 // Los comentarios siguen abiertos después de la prueba (piloto de noviembre).
 const COMENTARIOS_DESDE = PRUEBA.inicio;
@@ -1086,32 +1112,73 @@ function TarjetaPrueba({ T, titulo, children, icono="🧪" }) {
   );
 }
 
-// Lo que se muestra arriba del artículo según la fase de la prueba.
+// Invitación a probar: abre el menú de compartir del teléfono con los dos enlaces.
+const ENLACE_GRUPO  = "https://groups.google.com/g/probadores-ingeniedia";
+const ENLACE_PRUEBA = "https://play.google.com/apps/testing/cl.ingeniedia.app";
+const TEXTO_INVITACION =
+  "Estoy probando IngenieDía, una app con un artículo breve de ingeniería cada día. " +
+  "¿Me ayudas a probarla? Necesitas un Android y una cuenta Gmail.\n" +
+  `1. Únete al grupo: ${ENLACE_GRUPO}\n` +
+  `2. Inscríbete e instala: ${ENLACE_PRUEBA}`;
+
+function BotonInvitar({ T }) {
+  const [copiado, setCopiado] = useState(false);
+  async function invitar() {
+    try {
+      if (navigator?.share) { await navigator.share({ title:"Prueba IngenieDía", text:TEXTO_INVITACION }); return; }
+      await navigator.clipboard.writeText(TEXTO_INVITACION);
+      setCopiado(true); setTimeout(() => setCopiado(false), 3000);
+    } catch {}
+  }
+  return (
+    <PressBtn onClick={invitar}
+      style={{ background:"none", color:T.accent, border:`1.5px solid ${T.accent}`, borderRadius:12, padding:"8px 14px",
+        fontFamily:FONT, fontSize:12.5, fontWeight:700, cursor:"pointer" }}>
+      {copiado ? "Invitación copiada ✓" : "Invitar a probar"}
+    </PressBtn>
+  );
+}
+
+// Lo que se muestra arriba del artículo según la fase de la prueba. Aparece todos los días.
 function AvisoEtapa({ T, state, onAbrirEncuesta }) {
-  const fase = faseDe(hoyKey());
+  const hoy  = hoyKey();
+  const fase = faseDe(hoy);
   const p = { fontSize:12, color:T.sub, lineHeight:1.55, margin:"0 0 3px" };
+  // Google cuenta a los probadores solo si siguen inscritos: se recuerda cada día.
+  const seguirInscrito = (
+    <p style={{ ...p, margin:"8px 0 10px", color:T.text }}>
+      <b>Importante:</b> mantén IngenieDía instalada y no salgas del grupo de probadores hasta que te avisemos. Así tu participación cuenta.
+    </p>
+  );
   if (fase === "prueba") return (
     <TarjetaPrueba T={T} titulo="Estás en la etapa de prueba. ¡Gracias por ayudarnos!">
       <p style={p}>Al final de cada artículo puedes dejarnos un comentario.</p>
       <p style={{ ...p, margin:0 }}>El 19 de octubre te pediremos una breve encuesta de 1 minuto sobre tu experiencia.</p>
     </TarjetaPrueba>
   );
-  if (fase === "encuesta" && !state.encuestaEnviada) return (
+  if (fase !== "encuesta") return null;
+  const botones = { display:"flex", flexWrap:"wrap", gap:8 };
+  if (hoy <= PRUEBA.encuestaHasta && !state.encuestaEnviada) return (
     <TarjetaPrueba T={T} titulo="¡Gracias por tus comentarios!" icono="📝">
-      <p style={{ ...p, marginBottom:10 }}>Con ellos estamos mejorando IngenieDía, así que extendemos la etapa de prueba unos días más. ¿Nos cuentas cómo te ha ido? Es una encuesta anónima de 1 minuto.</p>
-      <PressBtn onClick={onAbrirEncuesta}
-        style={{ background:T.accent, color:"#fff", border:"none", borderRadius:12, padding:"9px 14px",
-          fontFamily:FONT, fontSize:12.5, fontWeight:700, cursor:"pointer" }}>
-        Responder la encuesta
-      </PressBtn>
+      <p style={p}>Con ellos estamos mejorando IngenieDía, así que extendemos la etapa de prueba unos días más. ¿Nos cuentas cómo te ha ido? Es una encuesta anónima de 1 minuto.</p>
+      {seguirInscrito}
+      <div style={botones}>
+        <PressBtn onClick={onAbrirEncuesta}
+          style={{ background:T.accent, color:"#fff", border:"none", borderRadius:12, padding:"9px 14px",
+            fontFamily:FONT, fontSize:12.5, fontWeight:700, cursor:"pointer" }}>
+          Responder la encuesta
+        </PressBtn>
+        <BotonInvitar T={T}/>
+      </div>
     </TarjetaPrueba>
   );
-  if (fase === "encuesta") return (
-    <TarjetaPrueba T={T} titulo="¡Gracias por responder la encuesta!" icono="🙌">
-      <p style={{ ...p, margin:0 }}>Seguimos probando unos días más. Sigue leyendo cada día y, si conoces a alguien a quien le pueda servir, invítalo a probar IngenieDía.</p>
+  return (
+    <TarjetaPrueba T={T} titulo={state.encuestaEnviada ? "¡Gracias por responder la encuesta!" : "¡Gracias por seguir probando!"} icono="🙌">
+      <p style={p}>Seguimos probando unos días más. Sigue leyendo cada día y, si conoces a alguien a quien le pueda servir, invítalo a probar IngenieDía.</p>
+      {seguirInscrito}
+      <div style={botones}><BotonInvitar T={T}/></div>
     </TarjetaPrueba>
   );
-  return null;
 }
 
 // Al final del artículo del día. Anónimo, uno por día (lo controla el teléfono).
@@ -1268,23 +1335,51 @@ function TodayView({ state, setState, T, showToast, scrollRef, articulos }) {
     return () => clearTimeout(t);
   }, [key]);
 
-  // Mark as read at 80% scroll depth + update streak for today
+  // Lectura y racha (ver las dos condiciones junto a computeStreak).
+  // Artículos de otros días: se marcan leídos al llegar al final, sin sumar racha.
+  const finRef     = useRef(false);   // condición 1: llegó al final (vista normal o pantalla completa)
+  const desdeRef   = useRef(null);    // inicio del tiempo seguido en el artículo
+  const contadoRef = useRef(false);
+  const marcarFin  = useCallback(() => { finRef.current = true; }, []);
   useEffect(() => {
-    if (isRead || !scrollRef?.current) return;
-    const el = scrollRef.current;
-    const check = () => {
-      if ((el.scrollTop + el.clientHeight) / el.scrollHeight >= 0.8) {
-        setState(s => {
-          const withRead = { ...s, read: [...new Set([...(s.read||[]), key])] };
-          return key === hoyKey() ? computeStreak(withRead) : withRead;
-        });
+    if (!art) return;
+    const esHoy = key === hoyKey();
+    finRef.current   = false;
+    contadoRef.current = esHoy ? state.lastReadDate === key : isRead;
+    desdeRef.current = document.visibilityState === "visible" ? Date.now() : null;
+    const el = scrollRef?.current;
+    const umbral = umbralRachaMs(art);
+
+    const revisar = () => {
+      if (contadoRef.current) return;
+      if (llegoAlFinal(el)) finRef.current = true;
+      if (!finRef.current) return;
+      if (!esHoy) {
+        contadoRef.current = true;
+        setState(s => ({ ...s, read: [...new Set([...(s.read||[]), key])] }));
         showToast("Artículo completado ✓");
-        el.removeEventListener("scroll", check);
+        return;
       }
+      if (key !== hoyKey()) return;                  // cambió el día con la app abierta
+      const seguido = desdeRef.current ? Date.now() - desdeRef.current : 0;
+      if (seguido < umbral) return;
+      contadoRef.current = true;
+      setState(s => computeStreak({ ...s, read: [...new Set([...(s.read||[]), key])] }));
+      showToast("¡Día sumado a tu racha! 🔥");
     };
-    el.addEventListener("scroll", check, { passive:true });
-    return () => el.removeEventListener("scroll", check);
-  }, [key, isRead]);
+    const alCambiarVisibilidad = () => {
+      desdeRef.current = document.visibilityState === "visible" ? Date.now() : null;
+    };
+    el?.addEventListener("scroll", revisar, { passive:true });
+    document.addEventListener("visibilitychange", alCambiarVisibilidad);
+    const reloj = setInterval(revisar, 1000);
+    revisar();
+    return () => {
+      el?.removeEventListener("scroll", revisar);
+      document.removeEventListener("visibilitychange", alCambiarVisibilidad);
+      clearInterval(reloj);
+    };
+  }, [key, art]);
 
   async function handleShare() {
     const text = sinMarcas(`${art.title}\n\n${art.description}\n\n${art.keyConcepts}`);
@@ -1307,7 +1402,7 @@ function TodayView({ state, setState, T, showToast, scrollRef, articulos }) {
 
   return (
     <>
-      {readMode && <ReadMode art={art} onClose={() => setReadMode(false)} T={T}/>}
+      {readMode && <ReadMode art={art} onClose={() => setReadMode(false)} onFin={marcarFin} T={T}/>}
       <div style={{ display:"flex", flexDirection:"column", gap:12,
         opacity: visible ? 1 : 0, transition:"opacity .3s ease" }}>
 
@@ -2366,6 +2461,19 @@ function RevisionView({ onSalir }) {
   );
 }
 
+// Pantalla de carga: igual a la de inicio de Android (fondo oscuro y rayo) más el lema.
+// index.html muestra la misma pantalla antes de que cargue el código.
+function PantallaCarga() {
+  return (
+    <div style={{ position:"fixed", inset:0, background:"#0f1117", display:"flex", flexDirection:"column",
+      alignItems:"center", justifyContent:"center", fontFamily:FONT }}>
+      <img src="/icons/icon-192.png" alt="" width="72" height="72"/>
+      <p style={{ color:"#f3f4f6", fontSize:26, fontWeight:700, margin:"18px 0 0", letterSpacing:"-.01em" }}>IngenieDía</p>
+      <p style={{ color:"#22d3ee", fontSize:14, margin:"6px 0 0" }}>Tu dosis diaria de ingeniería</p>
+    </div>
+  );
+}
+
 export default function App() {
   const [state, setStateRaw] = useState(DEFAULT_STATE);
   const [ready, setReady]    = useState(false);
@@ -2389,7 +2497,7 @@ export default function App() {
     cargarMes(mes).then(({ articulos:arts, errores }) => {
       setArticulos(prev => ({ ...prev, ...arts }));
       if (errores.length) setAvisos(prev => [...prev, ...errores]);
-    });
+    }).finally(() => { if (mes === mesDe(hoyKey())) setCargando(false); });
   }, []);
 
   // El mes de la fecha elegida.
@@ -2403,14 +2511,31 @@ export default function App() {
   }, [ready, state.saved, state.read, verMes]);
 
   useEffect(() => {
-    storeHydrate(DEFAULT_STATE).then(s => { setStateRaw({ ...s, selectedKey: hoyKey() }); setReady(true); });
+    storeHydrate(DEFAULT_STATE).then(s => {
+      const v = rachaVigente({ ...s, selectedKey: hoyKey() });
+      setStateRaw(v); storePersist(v); setReady(true);
+    });
   }, []);
+
+  // Al volver a la app (por ejemplo, al día siguiente), se recalcula la racha.
+  useEffect(() => {
+    const alVolver = () => {
+      if (document.visibilityState !== "visible") return;
+      setStateRaw(s => { const v = rachaVigente(s); if (v !== s) storePersist(v); return v; });
+    };
+    document.addEventListener("visibilitychange", alVolver);
+    return () => document.removeEventListener("visibilitychange", alVolver);
+  }, []);
+
+  // Pantalla de carga: hasta que llega el mes de hoy (máximo 5 s si no hay conexión).
+  const [cargando, setCargando] = useState(true);
+  useEffect(() => { const t = setTimeout(() => setCargando(false), 5000); return () => clearTimeout(t); }, []);
 
   // Encuesta de cierre: aparece sola una vez por apertura de la app,
   // mientras no se haya respondido. Se puede cerrar con la X.
   useEffect(() => {
     if (!ready || !state.onboardingDone || encuestaMostrada.current) return;
-    if (faseDe(hoyKey()) === "encuesta" && !state.encuestaEnviada) {
+    if (faseDe(hoyKey()) === "encuesta" && hoyKey() <= PRUEBA.encuestaHasta && !state.encuestaEnviada) {
       encuestaMostrada.current = true;
       setEncuestaAbierta(true);
     }
@@ -2455,6 +2580,8 @@ export default function App() {
       }
     }
   }
+
+  if (!revision && (!ready || cargando)) return <PantallaCarga/>;
 
   if (revision) return <RevisionView onSalir={() => {
     if (typeof window !== "undefined") window.location.hash = "";
