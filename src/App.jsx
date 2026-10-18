@@ -1097,8 +1097,8 @@ function AvisoEtapa({ T, state, onAbrirEncuesta }) {
     </TarjetaPrueba>
   );
   if (fase === "encuesta" && !state.encuestaEnviada) return (
-    <TarjetaPrueba T={T} titulo="Terminó la etapa de prueba" icono="📝">
-      <p style={{ ...p, marginBottom:10 }}>¿Nos cuentas cómo te fue? Es una encuesta anónima de 1 minuto.</p>
+    <TarjetaPrueba T={T} titulo="¡Gracias por tus comentarios!" icono="📝">
+      <p style={{ ...p, marginBottom:10 }}>Con ellos estamos mejorando IngenieDía, así que extendemos la etapa de prueba unos días más. ¿Nos cuentas cómo te ha ido? Es una encuesta anónima de 1 minuto.</p>
       <PressBtn onClick={onAbrirEncuesta}
         style={{ background:T.accent, color:"#fff", border:"none", borderRadius:12, padding:"9px 14px",
           fontFamily:FONT, fontSize:12.5, fontWeight:700, cursor:"pointer" }}>
@@ -1107,8 +1107,8 @@ function AvisoEtapa({ T, state, onAbrirEncuesta }) {
     </TarjetaPrueba>
   );
   if (fase === "encuesta") return (
-    <TarjetaPrueba T={T} titulo="Terminó el período de prueba. ¡Gracias por participar!" icono="🙌">
-      <p style={{ ...p, margin:0 }}>Estamos haciendo ajustes con sus comentarios. Muy pronto IngenieDía estará disponible para todos.</p>
+    <TarjetaPrueba T={T} titulo="¡Gracias por responder la encuesta!" icono="🙌">
+      <p style={{ ...p, margin:0 }}>Seguimos probando unos días más. Sigue leyendo cada día y, si conoces a alguien a quien le pueda servir, invítalo a probar IngenieDía.</p>
     </TarjetaPrueba>
   );
   return null;
@@ -1206,7 +1206,7 @@ function EncuestaCierre({ T, onCerrar, onEnviada }) {
       <div style={{ width:"100%", maxHeight:"92%", overflowY:"auto", background:T.bg,
         borderRadius:"22px 22px 0 0", padding:"16px 16px 20px", boxSizing:"border-box", fontFamily:FONT }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10, marginBottom:4 }}>
-          <p style={{ fontSize:16, fontWeight:700, color:T.text, margin:0 }}>¿Cómo te fue con IngenieDía?</p>
+          <p style={{ fontSize:16, fontWeight:700, color:T.text, margin:0 }}>¿Cómo te ha ido con IngenieDía?</p>
           <button onClick={onCerrar} aria-label="Cerrar"
             style={{ background:T.pill, border:`1px solid ${T.border}`, borderRadius:10, width:30, height:30,
               color:T.sub, cursor:"pointer", fontSize:16, lineHeight:1, flexShrink:0 }}>✕</button>
