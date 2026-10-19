@@ -2464,12 +2464,14 @@ function RevisionView({ onSalir }) {
 // Pantalla de carga: igual a la de inicio de Android (fondo oscuro y rayo) más el lema.
 // index.html muestra la misma pantalla antes de que cargue el código.
 function PantallaCarga() {
+  // Mismas clases que index.html (.carga): el rayo queda centrado igual que en la pantalla de Android.
   return (
-    <div style={{ position:"fixed", inset:0, background:"#0f1117", display:"flex", flexDirection:"column",
-      alignItems:"center", justifyContent:"center", fontFamily:FONT }}>
-      <img src="/icons/icon-192.png" alt="" width="112" height="112"/>
-      <p style={{ color:"#f3f4f6", fontSize:34, fontWeight:700, margin:"22px 0 0", letterSpacing:"-.01em" }}>IngenieDía</p>
-      <p style={{ color:"#22d3ee", fontSize:17, fontWeight:500, margin:"8px 0 0" }}>Tu dosis diaria de ingeniería</p>
+    <div className="carga">
+      <img src="/icons/icon-192.png" alt=""/>
+      <div className="lema">
+        <p className="t">IngenieDía</p>
+        <p className="s">Tu dosis diaria de ingeniería</p>
+      </div>
     </div>
   );
 }
