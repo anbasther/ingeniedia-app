@@ -1139,8 +1139,46 @@ function BotonInvitar({ T }) {
   );
 }
 
+// Guía para probadores: qué funciones usar durante la prueba. Se abre desde la tarjeta diaria.
+const PASOS_PRUEBA = [
+  ["Lee el artículo de cada día hasta el final y quédate al menos 1 minuto:", " así sumas a tu racha 🔥."],
+  ["Activa el aviso diario en", " Perfil."],
+  ["Revisa artículos de días anteriores en el", " calendario (la fecha bajo el título)."],
+  ["Guarda un artículo y búscalo en", " Archivo."],
+  ["Marca", " 👍 Me gusta o 👎 No me gusta en el artículo."],
+  ["Abre un artículo en", " pantalla completa y prueba compartir."],
+  ["Deja un", " comentario al final del artículo."],
+  ["Responde la", " encuesta (hasta el 31 de octubre)."],
+  ["Si algo falla, cuéntanos en los comentarios o en", " Google Play → IngenieDía → Enviar comentarios privados."],
+];
+
+function QueProbar({ T, abierto }) {
+  if (!abierto) return null;
+  return (
+    <div style={{ marginTop:10, background:T.bg, border:`1px solid ${T.border}`, borderRadius:14, padding:"12px 14px" }}>
+      <p style={{ fontSize:13, fontWeight:700, color:T.text, margin:"0 0 8px" }}>Qué probar en IngenieDía</p>
+      <ol style={{ margin:0, paddingLeft:20, display:"flex", flexDirection:"column", gap:6 }}>
+        {PASOS_PRUEBA.map(([a,b]) => (
+          <li key={a} style={{ fontSize:12, color:T.sub, lineHeight:1.5 }}>{a}<b style={{ color:T.text }}>{b}</b></li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function BotonQueProbar({ T, abierto, onClick }) {
+  return (
+    <PressBtn onClick={onClick}
+      style={{ background:"none", color:T.sub, border:`1.5px solid ${T.border}`, borderRadius:12, padding:"8px 14px",
+        fontFamily:FONT, fontSize:12.5, fontWeight:700, cursor:"pointer" }}>
+      {abierto ? "Ocultar guía" : "Qué probar"}
+    </PressBtn>
+  );
+}
+
 // Lo que se muestra arriba del artículo según la fase de la prueba. Aparece todos los días.
 function AvisoEtapa({ T, state, onAbrirEncuesta }) {
+  const [guia, setGuia] = useState(false);
   const hoy  = hoyKey();
   const fase = faseDe(hoy);
   const p = { fontSize:12, color:T.sub, lineHeight:1.55, margin:"0 0 3px" };
@@ -1169,14 +1207,20 @@ function AvisoEtapa({ T, state, onAbrirEncuesta }) {
           Responder la encuesta
         </PressBtn>
         <BotonInvitar T={T}/>
+        <BotonQueProbar T={T} abierto={guia} onClick={() => setGuia(g => !g)}/>
       </div>
+      <QueProbar T={T} abierto={guia}/>
     </TarjetaPrueba>
   );
   return (
     <TarjetaPrueba T={T} titulo={state.encuestaEnviada ? "¡Gracias por responder la encuesta!" : "¡Gracias por seguir probando!"} icono="🙌">
       <p style={p}>Seguimos probando unos días más. Sigue leyendo cada día y, si conoces a alguien a quien le pueda servir, invítalo a probar IngenieDía.</p>
       {seguirInscrito}
-      <div style={botones}><BotonInvitar T={T}/></div>
+      <div style={botones}>
+        <BotonInvitar T={T}/>
+        <BotonQueProbar T={T} abierto={guia} onClick={() => setGuia(g => !g)}/>
+      </div>
+      <QueProbar T={T} abierto={guia}/>
     </TarjetaPrueba>
   );
 }
