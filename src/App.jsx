@@ -2467,9 +2467,9 @@ function PantallaCarga() {
   return (
     <div style={{ position:"fixed", inset:0, background:"#0f1117", display:"flex", flexDirection:"column",
       alignItems:"center", justifyContent:"center", fontFamily:FONT }}>
-      <img src="/icons/icon-192.png" alt="" width="72" height="72"/>
-      <p style={{ color:"#f3f4f6", fontSize:26, fontWeight:700, margin:"18px 0 0", letterSpacing:"-.01em" }}>IngenieDía</p>
-      <p style={{ color:"#22d3ee", fontSize:14, margin:"6px 0 0" }}>Tu dosis diaria de ingeniería</p>
+      <img src="/icons/icon-192.png" alt="" width="112" height="112"/>
+      <p style={{ color:"#f3f4f6", fontSize:34, fontWeight:700, margin:"22px 0 0", letterSpacing:"-.01em" }}>IngenieDía</p>
+      <p style={{ color:"#22d3ee", fontSize:17, fontWeight:500, margin:"8px 0 0" }}>Tu dosis diaria de ingeniería</p>
     </div>
   );
 }
@@ -2497,7 +2497,7 @@ export default function App() {
     cargarMes(mes).then(({ articulos:arts, errores }) => {
       setArticulos(prev => ({ ...prev, ...arts }));
       if (errores.length) setAvisos(prev => [...prev, ...errores]);
-    }).finally(() => { if (mes === mesDe(hoyKey())) setCargando(false); });
+    }).finally(() => { if (mes === mesDe(hoyKey())) setMesHoyListo(true); });
   }, []);
 
   // El mes de la fecha elegida.
@@ -2528,8 +2528,16 @@ export default function App() {
   }, []);
 
   // Pantalla de carga: hasta que llega el mes de hoy (máximo 5 s si no hay conexión).
-  const [cargando, setCargando] = useState(true);
-  useEffect(() => { const t = setTimeout(() => setCargando(false), 5000); return () => clearTimeout(t); }, []);
+  // Se muestra al menos 1,2 s para que alcance a leerse, y como máximo 5 s si no hay conexión.
+  const [mesHoyListo, setMesHoyListo] = useState(false);
+  const [minimoCumplido, setMinimoCumplido] = useState(false);
+  const [tiempoMaximo, setTiempoMaximo] = useState(false);
+  useEffect(() => {
+    const a = setTimeout(() => setMinimoCumplido(true), 1200);
+    const b = setTimeout(() => setTiempoMaximo(true), 5000);
+    return () => { clearTimeout(a); clearTimeout(b); };
+  }, []);
+  const cargando = !tiempoMaximo && !(mesHoyListo && minimoCumplido);
 
   // Encuesta de cierre: aparece sola una vez por apertura de la app,
   // mientras no se haya respondido. Se puede cerrar con la X.
@@ -2654,7 +2662,7 @@ export default function App() {
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
             <div>
               <div style={{ fontSize:19, fontWeight:700, color:T.text, letterSpacing:.2 }}>IngenieDía</div>
-              <div style={{ fontSize:10, color:T.muted }}>Tu dosis diaria de ingeniería</div>
+              <div style={{ fontSize:12.5, fontWeight:600, color:T.accent, marginTop:1 }}>Tu dosis diaria de ingeniería</div>
               <HeaderCalendar state={state} setState={setState} T={T} articulos={articulos} onVerMes={verMes}/>
             </div>
             <div style={{ width:40, height:40, borderRadius:13, flexShrink:0,
