@@ -1,5 +1,5 @@
 // GET /api/aviso-diario
-// Lo llama Vercel una vez al día (ver vercel.json). Si hay artículo publicado
+// Lo llama Vercel una vez al día, a las 12:00 de Chile (ver vercel.json). Si hay artículo publicado
 // para hoy, envía el aviso a todos los teléfonos suscritos. Si no hay artículo,
 // no envía nada.
 //
@@ -51,7 +51,7 @@ module.exports = async (req, res) => {
     await Promise.all(Object.entries(todas).map(async ([endpoint, valor]) => {
       const s = typeof valor === "string" ? JSON.parse(valor) : valor;
       try {
-        await webpush.sendNotification(s, JSON.stringify(aviso), { TTL: 12 * 3600 });
+        await webpush.sendNotification({ endpoint: s.endpoint, keys: s.keys }, JSON.stringify(aviso), { TTL: 8 * 3600 });
         enviados++;
       } catch (e) {
         // 404/410: el teléfono desinstaló la app o revocó el permiso.

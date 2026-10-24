@@ -1,4 +1,4 @@
-// GET    /api/resultados[?simulada=1]  → encuesta (conteos y comentarios) y comentarios diarios
+// GET    /api/resultados[?simulada=1]  → encuesta (conteos y comentarios), comentarios diarios y preguntas rápidas
 // DELETE /api/resultados?simulada=1    → borra solo los datos simulados (pruebas del docente)
 // Solo para el docente: exige la cabecera "x-clave" igual a CLAVE_DOCENTE (variable de Vercel).
 const crypto = require("crypto");
@@ -28,7 +28,7 @@ module.exports = async (req, res) => {
 
     if (req.method === "DELETE") {
       if (!simulada) return res.status(400).json({ error: "Solo se pueden borrar los datos simulados." });
-      await db.del(CLAVES_OPINION.comentarios.simulada, CLAVES_OPINION.encuesta.simulada);
+      await db.del(CLAVES_OPINION.comentarios.simulada, CLAVES_OPINION.encuesta.simulada, CLAVES_OPINION.sondeo.simulada);
       return res.status(200).json({ ok: true });
     }
     if (req.method !== "GET") {
@@ -36,10 +36,17 @@ module.exports = async (req, res) => {
       return res.status(405).json({ error: "Método no permitido." });
     }
 
-    const [com, enc] = await Promise.all([
+    const [com, enc, son] = await Promise.all([
       db.lrange(CLAVES_OPINION.comentarios[tipo], 0, -1),
       db.lrange(CLAVES_OPINION.encuesta[tipo], 0, -1),
+      db.lrange(CLAVES_OPINION.sondeo[tipo], 0, -1),
     ]);
+    // Preguntas rápidas: conteo por pregunta y respuesta.
+    const sondeo = {};
+    for (const v of (son || []).map(leer).filter(Boolean)) {
+      sondeo[v.pregunta] = sondeo[v.pregunta] || {};
+      sondeo[v.pregunta][v.respuesta] = (sondeo[v.pregunta][v.respuesta] || 0) + 1;
+    }
     const comentarios = (com || []).map(leer).filter(Boolean).reverse(); // más recientes primero
     const respuestas  = (enc || []).map(leer).filter(Boolean);
 
@@ -56,6 +63,7 @@ module.exports = async (req, res) => {
       simulada,
       encuesta: { total: respuestas.length, conteos, comentarios: comentariosEncuesta },
       comentarios,
+      sondeo,
     });
   } catch (e) {
     return res.status(500).json({ error: e.message });

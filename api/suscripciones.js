@@ -20,8 +20,11 @@ module.exports = async (req, res) => {
       const existe = await db.hexists(CLAVE_SUSCRIPCIONES, s.endpoint);
       if (!existe && (await db.hlen(CLAVE_SUSCRIPCIONES)) >= MAX_SUSCRIPCIONES)
         return res.status(429).json({ error: "Se alcanzó el máximo de suscripciones." });
+      // Si ya existía, se conserva su última lectura (recordatorio de racha).
+      const previa = existe ? await db.hget(CLAVE_SUSCRIPCIONES, s.endpoint) : null;
+      const lectura = previa ? (typeof previa === "string" ? JSON.parse(previa) : previa).lectura : undefined;
       await db.hset(CLAVE_SUSCRIPCIONES, {
-        [s.endpoint]: JSON.stringify({ endpoint: s.endpoint, keys: s.keys }),
+        [s.endpoint]: JSON.stringify({ endpoint: s.endpoint, keys: s.keys, ...(lectura ? { lectura } : {}) }),
       });
       return res.status(200).json({ ok: true });
     }

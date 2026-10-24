@@ -93,6 +93,12 @@
     </section>
 
     <section class="tarjeta">
+      <h2>Pregunta rápida: mini quiz</h2>
+      <p class="cifra">«¿Te gustaría un mini quiz opcional al final de cada artículo?» (en la app del 26 al 31 de octubre)</p>
+      <ul class="lista" id="lista-son"></ul>
+    </section>
+
+    <section class="tarjeta">
       <h2>Encuesta de cierre</h2>
       <p class="cifra" id="cifra-enc"></p>
       <div class="tabla"><table id="tabla-enc"></table></div>
@@ -145,6 +151,16 @@
     com.forEach(c => lc.append(el("li", {},
       el("p", { className:"meta", textContent:`${fechaBonita(c.fecha)} · ${c.titulo || "artículo del " + fechaBonita(c.articulo)}` }),
       el("p", { className:"texto", textContent:c.texto }))));
+
+    // Pregunta rápida (mini quiz)
+    const q = (j.sondeo || {}).quiz || {};
+    const totalQ = (q.si || 0) + (q.no || 0) + (q.igual || 0);
+    const ls = $("lista-son"); ls.replaceChildren();
+    [["si","Sí, me gustaría"],["no","No"],["igual","Me da igual"]].forEach(([k, n]) => {
+      const v = q[k] || 0, pct = totalQ ? Math.round(v / totalQ * 100) : 0;
+      ls.append(el("li", {}, el("p", { className:"texto", textContent:`${n}: ${v}${totalQ ? ` (${pct} %)` : ""}` })));
+    });
+    ls.append(el("li", {}, el("p", { className:"meta", textContent: totalQ === 1 ? "1 respuesta." : `${totalQ} respuestas.` })));
 
     // Encuesta
     const enc = j.encuesta || { total:0, conteos:{}, comentarios:[] };

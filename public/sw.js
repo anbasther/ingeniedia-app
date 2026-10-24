@@ -1,10 +1,12 @@
 // Service worker de IngenieDía.
-// Guarda la app en el teléfono para que abra sin conexión, pero siempre
-// intenta primero la red: así cada artículo nuevo y cada versión nueva de la
-// app llegan en cuanto hay internet. Al cambiar la app, subir VERSION.
-const VERSION = "v7";
+// Inicio instantáneo (v0.6.1): la página de la app, la letra y los íconos se
+// abren desde lo guardado en el teléfono, sin esperar a internet, y se
+// actualizan por detrás para la próxima vez. Los artículos (/contenido) y los
+// datos (/api) siempre van primero a la red. Al cambiar la app, subir VERSION.
+const VERSION = "v9";
 const CACHE = `ingeniedia-${VERSION}`;
-const BASE = ["/", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
+const BASE = ["/", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png",
+              "/fonts/ibm-plex-sans-500.woff2", "/fonts/ibm-plex-sans-700.woff2"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(BASE)).then(() => self.skipWaiting()));
@@ -40,20 +42,41 @@ async function guardadoPrimero(req) {
   return res;
 }
 
+// Guardado primero y actualización por detrás: abre al instante y la próxima
+// vez ya trae la versión nueva. Sin nada guardado, espera a la red.
+async function guardadoYActualiza(e, req, clave) {
+  const cache = await caches.open(CACHE);
+  const hit = await cache.match(clave || req);
+  const red = fetch(req).then(res => {
+    if (res.ok) cache.put(clave || req, res.clone());
+    return res;
+  });
+  if (hit) { e.waitUntil(red.catch(() => {})); return hit; }
+  return red;
+}
+
 self.addEventListener("fetch", e => {
   const req = e.request;
   const url = new URL(req.url);
   if (req.method !== "GET" || url.origin !== location.origin) return;
   // Navegación: cada página se guarda con su propia dirección (la app en "/",
   // la política en "/privacidad"). Sin conexión, si no está guardada, abre la app.
+  // La app ("/") abre desde el teléfono; las demás páginas (privacidad,
+  // términos, resultados) siguen yendo primero a la red.
+  if (req.mode === "navigate" && url.pathname === "/") return e.respondWith(
+    guardadoYActualiza(e, req, "/").catch(() => caches.match("/").then(a => a || Response.error()))
+  );
   if (req.mode === "navigate") return e.respondWith(
     redPrimero(req).then(r => r.type === "error" ? caches.match("/").then(a => a || r) : r)
   );
   if (url.pathname.startsWith("/assets/")) return e.respondWith(guardadoPrimero(req));
+  if (url.pathname.startsWith("/fonts/") || url.pathname.startsWith("/icons/"))
+    return e.respondWith(guardadoYActualiza(e, req));
   e.respondWith(redPrimero(req));
 });
 
-// Aviso diario: llega desde /api/aviso-diario.
+// Avisos: el del artículo llega desde /api/aviso-diario (12:00) y el
+// recordatorio de racha desde /api/aviso-racha (20:00).
 self.addEventListener("push", e => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch { d = { body: e.data && e.data.text() }; }
@@ -61,7 +84,7 @@ self.addEventListener("push", e => {
     body: d.body || "Ya está el artículo de hoy.",
     icon: "/icons/icon-192.png",
     badge: "/icons/icon-192.png",
-    tag: "articulo-del-dia",   // un aviso nuevo reemplaza al anterior
+    tag: d.tag || "articulo-del-dia",   // un aviso nuevo del mismo tipo reemplaza al anterior
     data: { url: d.url || "/" },
   }));
 });

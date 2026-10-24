@@ -45,15 +45,16 @@ const hoyKey = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 };
-const APP_VERSION = "0.6.0";
+const APP_VERSION = "0.6.2";
 const CORREO_CONTACTO = "anbasther@gmail.com";
 
 // Aviso que acompaña a cada artículo. El texto completo está en /terminos.
 const AVISO_REFERENCIAL = "Guía referencial de carácter educativo. No reemplaza la normativa oficial vigente ni el criterio de un profesional habilitado. Ante cualquier diferencia, prevalece la norma oficial.";
-// Texto de lectura: justificado, con guiones automáticos en español para que
-// el justificado no deje espacios anchos en pantallas angostas. "pre-line"
-// respeta los saltos de párrafo que traen los artículos (\n\n).
-const JUSTIFICADO = { textAlign:"justify", hyphens:"auto", WebkitHyphens:"auto" };
+// Texto de lectura alineado a la izquierda (decidido 13 oct): el justificado
+// dejaba espacios anchos entre palabras en el teléfono. Se mantiene el nombre
+// JUSTIFICADO para no tocar cada uso. "pre-line" respeta los saltos de
+// párrafo que traen los artículos (\n\n).
+const JUSTIFICADO = { textAlign:"left" };
 const TEXTO_LARGO = { ...JUSTIFICADO, whiteSpace:"pre-line" };
 const FONT        = "'IBM Plex Sans', system-ui, sans-serif";
 
@@ -85,6 +86,24 @@ const DAYS   = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
 const fmtDate = (key) => {
   const [y,m,d] = key.split("-").map(Number);
   return `${DAYS[new Date(y,m-1,d).getDay()]} ${d} de ${MONTHS[m-1].toLowerCase()} ${y}`;
+};
+// Primer mes con artículos para estudiantes (la prueba partió el 5 oct 2026).
+const PRIMER_MES = "2026-10";
+// Meses desde PRIMER_MES hasta el de la fecha dada, ambos incluidos.
+const mesesHasta = (fechaKey) => {
+  const fin = fechaKey.slice(0, 7), out = [];
+  let [y,m] = PRIMER_MES.split("-").map(Number);
+  for (let k = PRIMER_MES; k <= fin; ) {
+    out.push(k); m++; if (m > 12) { m = 1; y++; }
+    k = `${y}-${String(m).padStart(2,"0")}`;
+  }
+  return out;
+};
+// Para buscar sin distinguir mayúsculas ni tildes.
+const normalizar = (t) => sinMarcas(t).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const fmtCorta = (key) => {
+  const [y,m,d] = key.split("-").map(Number);
+  return `${DAYS[new Date(y,m-1,d).getDay()]} ${d} ${MONTHS[m-1].slice(0,3).toLowerCase()}`;
 };
 const toKey = (y,m,d) => `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
 const getMonthYear = (key) => { const [y,m] = key.split("-").map(Number); return { yr:y, mo:m-1 }; };
@@ -865,14 +884,14 @@ function Onboarding({ onDone, T }) {
       </div>
       <div key={slide} style={{ fontSize:56, marginBottom:24, animation:"fadeUp .35s ease" }}>{icon}</div>
       <h2 style={{ fontSize:20, fontWeight:700, color:T.text, textAlign:"center", margin:"0 0 12px", lineHeight:1.3 }}>{title}</h2>
-      <p style={{ ...JUSTIFICADO, textAlignLast:"center", fontSize:13, color:T.sub, lineHeight:1.7, margin:"0 0 40px" }}>{body}</p>
+      <p style={{ ...JUSTIFICADO, textAlign:"center", fontSize:13, color:T.sub, lineHeight:1.7, margin:"0 0 40px" }}>{body}</p>
       <PressBtn onClick={() => isLast ? onDone() : setSlide(s => s+1)}
         style={{ width:"100%", padding:"14px 0", borderRadius:16, background:T.accent, border:"none",
           fontSize:14, fontWeight:700, color:"#0f172a", cursor:"pointer", letterSpacing:.2 }}>
         {cta}
       </PressBtn>
       {isLast && (
-        <p style={{ ...JUSTIFICADO, textAlignLast:"center", marginTop:16, fontSize:11, color:T.muted, lineHeight:1.55 }}>
+        <p style={{ ...JUSTIFICADO, textAlign:"center", marginTop:16, fontSize:11, color:T.muted, lineHeight:1.55 }}>
           IngenieDía es una guía referencial y no reemplaza la normativa oficial.
           Al comenzar aceptas los{" "}
           <a href="/terminos" target="_blank" rel="noopener" style={{ color:T.muted, textDecoration:"underline" }}>Términos de uso</a>
@@ -1067,7 +1086,7 @@ const ASPECTOS_ENCUESTA = [
   { key:"claridad",  titulo:"Claridad",          ayuda:"qué tan fácil de entender" },
   { key:"fluidez",   titulo:"Fluidez",           ayuda:"rapidez, que no se trabe" },
   { key:"facilidad", titulo:"Facilidad de uso",  ayuda:"encontrar lo que buscas" },
-  { key:"aviso",     titulo:"Aviso diario",      ayuda:"notificación de cada mañana", noUso:true },
+  { key:"aviso",     titulo:"Aviso diario",      ayuda:"notificación del artículo del día", noUso:true },
 ];
 const NIVELES_ENCUESTA = [
   { key:"muy-malo",  label:"Muy malo" },
@@ -1142,7 +1161,7 @@ function BotonInvitar({ T }) {
 // Guía para probadores: qué funciones usar durante la prueba. Se abre desde la tarjeta diaria.
 const PASOS_PRUEBA = [
   ["Lee el artículo de cada día hasta el final y quédate al menos 1 minuto:", " así sumas a tu racha 🔥."],
-  ["Activa el aviso diario en", " Perfil."],
+  ["Activa el aviso diario en", " Perfil: llega a mediodía y a las 20:00 te recuerda tu racha."],
   ["Revisa artículos de días anteriores en el", " calendario (la fecha bajo el título)."],
   ["Guarda un artículo y búscalo en", " Archivo."],
   ["Marca", " 👍 Me gusta o 👎 No me gusta en el artículo."],
@@ -1177,6 +1196,50 @@ function BotonQueProbar({ T, abierto, onClick }) {
 }
 
 // Lo que se muestra arriba del artículo según la fase de la prueba. Aparece todos los días.
+// Pregunta rápida dentro de la app (26–31 oct): ¿quieren un mini quiz?
+// Se muestra en Hoy hasta que se responde. Las respuestas llegan a /resultados.
+const SONDEO = {
+  id:"quiz", desde:"2026-10-26", hasta:"2026-10-31",
+  pregunta:"¿Te gustaría un mini quiz opcional de 2 o 3 preguntas al final de cada artículo, para comprobar lo que aprendiste?",
+  opciones:[["si","Sí, me gustaría"],["no","No"],["igual","Me da igual"]],
+};
+function TarjetaSondeo({ T, state, setState }) {
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState("");
+  const [gracias, setGracias] = useState(false);
+  const hoy = hoyKey();
+  const respondida = (state.sondeos || {})[SONDEO.id];
+  if (hoy < SONDEO.desde || hoy > SONDEO.hasta || (respondida && !gracias)) return null;
+  async function responder(r) {
+    setEnviando(true); setError("");
+    try {
+      await enviarOpinion("/api/sondeo", { pregunta:SONDEO.id, respuesta:r });
+      setGracias(true);
+      setState(s => ({ ...s, sondeos:{ ...(s.sondeos || {}), [SONDEO.id]:r } }));
+    } catch (e) { setError(e.message); } finally { setEnviando(false); }
+  }
+  return (
+    <TarjetaPrueba T={T} titulo={gracias ? "¡Gracias por responder!" : "Una pregunta rápida"} icono={gracias ? "🙌" : "🙋"}>
+      {gracias
+        ? <p style={{ fontSize:12, color:T.sub, lineHeight:1.55, margin:0 }}>Tu respuesta nos ayuda a decidir qué agregar a IngenieDía.</p>
+        : <>
+            <p style={{ fontSize:12.5, color:T.text, lineHeight:1.55, margin:"0 0 10px" }}>{SONDEO.pregunta}</p>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
+              {SONDEO.opciones.map(([k, txt], i) => (
+                <PressBtn key={k} disabled={enviando} onClick={() => responder(k)}
+                  style={{ background: i === 0 ? T.accent : T.card, color: i === 0 ? "#fff" : T.text,
+                    border: i === 0 ? "none" : `1px solid ${T.border}`, borderRadius:12, padding:"9px 14px",
+                    fontFamily:FONT, fontSize:12.5, fontWeight:700, cursor:"pointer", opacity: enviando ? .6 : 1 }}>
+                  {txt}
+                </PressBtn>
+              ))}
+            </div>
+            {error && <p style={{ fontSize:11.5, color:T.danger, margin:"8px 0 0" }}>{error}</p>}
+          </>}
+    </TarjetaPrueba>
+  );
+}
+
 function AvisoEtapa({ T, state, onAbrirEncuesta }) {
   const [guia, setGuia] = useState(false);
   const hoy  = hoyKey();
@@ -1479,7 +1542,7 @@ function TodayView({ state, setState, T, showToast, scrollRef, articulos }) {
           <div style={{ padding:"12px 16px" }}>
             {/* Título bajo la imagen, para que no la tape */}
             <p style={{ fontSize:10, color:T.accent, fontWeight:700, letterSpacing:1, margin:"0 0 3px" }}>
-              HOY EN INGENIEDÍA
+              {key === hoyKey() ? "HOY EN INGENIEDÍA" : fmtDate(key).toUpperCase()}
             </p>
             <h2 style={{ fontSize:17, fontWeight:700, color:T.text, lineHeight:1.3, margin:"0 0 10px" }}>
               {art.title}
@@ -1531,6 +1594,21 @@ function TodayView({ state, setState, T, showToast, scrollRef, articulos }) {
         </div>
 
         <Comentarios T={T} art={art} fecha={key} state={state} setState={setState}/>
+
+        {/* Acceso al Archivo */}
+        <PressBtn onClick={() => setState(s => ({ ...s, tab:"archive" }))}
+          style={{ width:"100%", borderRadius:18, border:`1px solid ${T.border}`, background:T.card,
+            padding:"13px 15px", cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", gap:12 }}>
+          <span style={{ width:36, height:36, borderRadius:10, flexShrink:0, background:T.accentBg,
+            border:`1px solid ${T.border}`, display:"flex", alignItems:"center", justifyContent:"center", color:T.accent }}>
+            <Ic.Search s={16}/>
+          </span>
+          <span style={{ flex:1, minWidth:0 }}>
+            <span style={{ display:"block", fontSize:13, fontWeight:700, color:T.text }}>Ver artículos anteriores</span>
+            <span style={{ display:"block", fontSize:11, color:T.muted, marginTop:2 }}>Busca entre todos los artículos publicados</span>
+          </span>
+          <span style={{ color:T.muted, display:"flex" }}><Ic.ChevR s={14}/></span>
+        </PressBtn>
       </div>
     </>
   );
@@ -1539,134 +1617,141 @@ function TodayView({ state, setState, T, showToast, scrollRef, articulos }) {
 // ═══════════════════════════════════════════════════
 // ARCHIVE VIEW
 // ═══════════════════════════════════════════════════
+// Archivo: todos los artículos publicados hasta hoy (guardados o no), con
+// buscador y filtros. Nunca muestra días futuros. Debajo, el mapa de lo guardado.
 function ArchiveView({ state, setState, T, articulos }) {
-  const [query, setQuery] = useState("");
+  const [query,  setQuery]  = useState("");
+  const [filtro, setFiltro] = useState("todos");   // "todos" | "guardados" | un área
+  const hoy = hoyKey();
 
-  const savedArts = useMemo(
-    () => state.saved.map(k => ({ k, art:articulos[k] })).filter(x => x.art),
-    [state.saved, articulos]
-  );
+  const todos = useMemo(() => Object.keys(articulos)
+    .filter(k => k <= hoy && (k >= PRIMER_MES || state.saved.includes(k)))
+    .sort((a, b) => b.localeCompare(a))
+    .map(k => {
+      const art = articulos[k];
+      const texto = normalizar([art.title, art.shortCategory, art.description, art.context,
+        art.detail, art.ai, art.history, art.keyConcepts].filter(Boolean).join(" "));
+      return { k, art, texto };
+    }), [articulos, hoy, state.saved]);
+
+  const guardados = useMemo(() => todos.filter(x => state.saved.includes(x.k)), [todos, state.saved]);
   const byCat = useMemo(
-    () => CATEGORIES.map(cat => ({ ...cat, items: savedArts.filter(({art}) => art.shortCategory===cat.key) })),
-    [savedArts]
+    () => CATEGORIES.map(cat => ({ ...cat, n: guardados.filter(x => x.art.shortCategory === cat.key).length })),
+    [guardados]
   );
-  const totalSaved = useMemo(() => byCat.reduce((n,c) => n+c.items.length, 0), [byCat]);
-  const maxV       = useMemo(() => Math.max(1, ...byCat.map(c => c.items.length)), [byCat]);
+  const maxV = Math.max(1, ...byCat.map(c => c.n));
 
-  const searchResults = useMemo(() =>
-    query ? savedArts.filter(({art}) =>
-      art.title.toLowerCase().includes(query.toLowerCase()) ||
-      art.shortCategory.toLowerCase().includes(query.toLowerCase())
-    ) : [],
-    [query, savedArts]
-  );
+  const palabras = normalizar(query).split(/\s+/).filter(Boolean);
+  const lista = (filtro === "todos" ? todos : filtro === "guardados" ? guardados
+                  : todos.filter(x => x.art.shortCategory === filtro))
+    .filter(x => palabras.every(p => x.texto.includes(p)));
 
-  const SZ=180, CX=90;
-  const radarPoly = byCat.map((c,i) => {
-    const a = -Math.PI/2 + (i*2*Math.PI)/byCat.length;
-    const r = c.items.length===0 ? 0 : 18+(c.items.length/maxV)*62;
-    return `${CX+Math.cos(a)*r},${CX+Math.sin(a)*r}`;
-  }).join(" ");
+  const abrir = k => setState(s => ({ ...s, selectedKey:k, tab:"today" }));
+
+  const chip = (id, texto) => {
+    const on = filtro === id;
+    return (
+      <button key={id} onClick={() => setFiltro(on && id !== "todos" ? "todos" : id)}
+        style={{ flexShrink:0, borderRadius:20, padding:"6px 12px", fontSize:11.5, fontWeight:600, cursor:"pointer",
+          fontFamily:FONT, border:`1px solid ${on ? T.accent : T.border}`,
+          background: on ? T.accentBg : T.card, color: on ? T.accent : T.sub }}>
+        {texto}
+      </button>
+    );
+  };
+
+  // Mapa de temas guardados: nombres completos, sin cortes en los bordes.
+  const W = 360, H = 240, CX = 180, CY = 122, RMAX = 76, RLBL = 90;
+  const ang = i => -Math.PI/2 + (i*2*Math.PI)/byCat.length;
+  const radio = n => n === 0 ? 0 : 12 + (n/maxV)*(RMAX-12);
+  const anillo = f => byCat.map((_, i) => `${CX+Math.cos(ang(i))*RMAX*f},${CY+Math.sin(ang(i))*RMAX*f}`).join(" ");
+  const radarPoly = byCat.map((c, i) => `${CX+Math.cos(ang(i))*radio(c.n)},${CY+Math.sin(ang(i))*radio(c.n)}`).join(" ");
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
       <Card T={T}>
         <h2 style={{ fontSize:18, fontWeight:700, color:T.text, margin:"0 0 4px" }}>Archivo</h2>
         <p style={{ fontSize:12, color:T.muted, margin:0 }}>
-          {totalSaved===0 ? "Aún no has guardado ningún artículo."
-            : `${totalSaved} artículo${totalSaved!==1?"s":""} guardado${totalSaved!==1?"s":""}.`}
+          {todos.length} artículo{todos.length !== 1 ? "s" : ""} publicado{todos.length !== 1 ? "s" : ""}
+          {" · "}{guardados.length} guardado{guardados.length !== 1 ? "s" : ""}
         </p>
       </Card>
 
-      {/* Search bar */}
-      {totalSaved > 0 && (
-        <div style={{ position:"relative" }}>
-          <span style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", color:T.muted, display:"flex" }}>
-            <Ic.Search s={14}/>
-          </span>
-          <input value={query} onChange={e => setQuery(e.target.value)}
-            placeholder="Buscar por título o categoría…"
-            style={{ width:"100%", background:T.card, border:`1px solid ${T.border}`, borderRadius:14,
-              padding:"9px 12px 9px 34px", color:T.text, fontSize:12, outline:"none", boxSizing:"border-box" }}/>
-        </div>
-      )}
+      {/* Buscador */}
+      <div style={{ position:"relative" }}>
+        <span style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", color:T.muted, display:"flex" }}>
+          <Ic.Search s={14}/>
+        </span>
+        <input value={query} onChange={e => setQuery(e.target.value)} type="search"
+          placeholder="Buscar en todos los artículos…" aria-label="Buscar en todos los artículos"
+          style={{ width:"100%", background:T.card, border:`1px solid ${T.border}`, borderRadius:14,
+            padding:"10px 12px 10px 34px", color:T.text, fontSize:13, outline:"none", boxSizing:"border-box", fontFamily:FONT }}/>
+      </div>
 
-      {/* Search results */}
-      {query && (
-        <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
-          {searchResults.length === 0
-            ? <p style={{ fontSize:12, color:T.muted, textAlign:"center", padding:"12px 0" }}>Sin resultados para "{query}"</p>
-            : searchResults.map(({k, art}) => {
-                const CI = CatIcon[art.shortCategory];
-                return (
-                  <PressBtn key={k} onClick={() => setState(s=>({...s,selectedKey:k,tab:"today"}))}
-                    style={{ width:"100%", borderRadius:16, border:`1px solid ${T.border}`, background:T.card,
-                      padding:"11px 13px", cursor:"pointer", textAlign:"left",
-                      display:"flex", alignItems:"center", gap:11 }}>
-                    <span style={{ width:36, height:36, display:"flex", alignItems:"center", justifyContent:"center",
-                      borderRadius:10, background:T.accentBg, border:`1px solid ${T.border}`, flexShrink:0 }}>
-                      {CI && <CI c={T.accent} s={18}/>}
-                    </span>
-                    <div style={{ minWidth:0 }}>
-                      <p style={{ fontSize:12, fontWeight:700, color:T.text, margin:0,
-                        overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{art.title}</p>
-                      <p style={{ fontSize:10, color:T.muted, margin:"2px 0 0" }}>
-                        {art.shortCategory} · {fmtDate(k)}
-                      </p>
-                    </div>
-                  </PressBtn>
-                );
-              })
-          }
-        </div>
-      )}
+      {/* Filtros */}
+      <div style={{ display:"flex", gap:6, overflowX:"auto", paddingBottom:2, scrollbarWidth:"none" }}>
+        {chip("todos", "Todos")}
+        {chip("guardados", `Guardados (${guardados.length})`)}
+        {CATEGORIES.map(c => chip(c.key, c.key))}
+      </div>
 
-      {/* Category rows */}
-      {!query && (
-        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-          {byCat.map(cat => {
-            const CI = CatIcon[cat.key];
-            return (
-              <div key={cat.key} style={{ borderRadius:18, border:`1px solid ${T.border}`, background:T.card, padding:"11px 13px" }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:9 }}>
-                    <span style={{ width:38, height:38, display:"flex", alignItems:"center", justifyContent:"center",
-                      borderRadius:11, background:T.accentBg, border:`1px solid ${T.border}`, flexShrink:0 }}>
-                      {CI && <CI c={T.accent} s={20}/>}
-                    </span>
-                    <span style={{ fontSize:13, fontWeight:600, color:T.text }}>{cat.key}</span>
-                  </div>
-                  <span style={{ fontSize:10, border:`1px solid ${T.border}`, borderRadius:12, padding:"2px 9px", color:T.muted }}>
-                    {cat.items.length} guardado{cat.items.length!==1?"s":""}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {/* Lista */}
+      <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
+        {lista.length === 0 && (
+          <p style={{ fontSize:12, color:T.muted, textAlign:"center", padding:"14px 8px", margin:0, lineHeight:1.6 }}>
+            {palabras.length ? `Sin resultados para «${query.trim()}».`
+              : filtro === "guardados" ? "Aún no has guardado artículos. Toca el marcador de un artículo para guardarlo aquí."
+              : "Todavía no hay artículos de esta área."}
+          </p>
+        )}
+        {lista.map(({ k, art }) => {
+          const CI = CatIcon[art.shortCategory];
+          const guardado = state.saved.includes(k);
+          const leido = (state.read || []).includes(k);
+          return (
+            <PressBtn key={k} onClick={() => abrir(k)}
+              style={{ width:"100%", borderRadius:16, border:`1px solid ${T.border}`, background:T.card,
+                padding:"11px 13px", cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", gap:11 }}>
+              <span style={{ width:36, height:36, display:"flex", alignItems:"center", justifyContent:"center",
+                borderRadius:10, background:T.accentBg, border:`1px solid ${T.border}`, flexShrink:0 }}>
+                {CI && <CI c={T.accent} s={18}/>}
+              </span>
+              <span style={{ minWidth:0, flex:1 }}>
+                <span style={{ display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden",
+                  fontSize:12.5, fontWeight:700, color:T.text, lineHeight:1.35 }}>{art.title}</span>
+                <span style={{ display:"block", fontSize:10.5, color:T.muted, marginTop:3 }}>
+                  {art.shortCategory} · {k === hoy ? "Hoy" : fmtCorta(k)}{leido ? " · ✓ Leído" : ""}
+                </span>
+              </span>
+              {guardado && <span style={{ color:T.accent, display:"flex", flexShrink:0 }} aria-label="Guardado"><Ic.Bookmark s={15} filled/></span>}
+            </PressBtn>
+          );
+        })}
+      </div>
 
-      {/* Radar — only when data exists */}
-      {!query && totalSaved > 0 && (
+      {/* Mapa de temas guardados */}
+      {!palabras.length && guardados.length > 0 && (filtro === "todos" || filtro === "guardados") && (
         <Card T={T}>
-          <p style={{ fontSize:13, fontWeight:700, color:T.text, marginBottom:3 }}>Mapa de temas guardados</p>
-          <p style={{ fontSize:11, color:T.muted, marginBottom:12 }}>Cada punta refleja la cantidad guardada por categoría.</p>
-          <svg viewBox={`0 0 ${SZ} ${SZ}`} style={{ width:"100%", maxWidth:SZ, display:"block", margin:"0 auto" }}>
-            <polygon points={radarPoly} fill={`${T.accent}20`} stroke={T.accent} strokeWidth="1.5"/>
-            {byCat.map((c,i) => {
-              const a  = -Math.PI/2 + (i*2*Math.PI)/byCat.length;
-              const lr = 82;
-              const lx = CX + Math.cos(a)*lr;
-              const ly = CX + Math.sin(a)*lr;
-              const pr = c.items.length===0 ? 0 : 18+(c.items.length/maxV)*62;
+          <p style={{ fontSize:13, fontWeight:700, color:T.text, margin:"0 0 3px" }}>Mapa de temas guardados</p>
+          <p style={{ fontSize:11, color:T.muted, margin:"0 0 8px" }}>Cuántos artículos guardaste de cada área.</p>
+          <svg viewBox={`0 0 ${W} ${H}`} style={{ width:"100%", maxWidth:W, display:"block", margin:"0 auto" }}
+            role="img" aria-label="Artículos guardados por área">
+            {[1/3, 2/3, 1].map(f => <polygon key={f} points={anillo(f)} fill="none" stroke={T.border} strokeWidth="1"/>)}
+            {byCat.map((c, i) => (
+              <line key={c.key} x1={CX} y1={CY} x2={CX+Math.cos(ang(i))*RMAX} y2={CY+Math.sin(ang(i))*RMAX}
+                stroke={T.border} strokeWidth="1"/>
+            ))}
+            <polygon points={radarPoly} fill={`${T.accent}26`} stroke={T.accent} strokeWidth="2" strokeLinejoin="round"/>
+            {byCat.map((c, i) => {
+              const a = ang(i), cos = Math.cos(a), sin = Math.sin(a);
+              const lx = CX + cos*RLBL, ly = CY + sin*RLBL;
+              const anchor = cos > 0.3 ? "start" : cos < -0.3 ? "end" : "middle";
+              const y1 = sin < -0.9 ? ly - 14 : sin > 0.5 ? ly + 8 : ly - 2;
               return (
                 <g key={c.key}>
-                  <line x1={CX} y1={CX} x2={lx} y2={ly} stroke={T.border} strokeWidth="1"/>
-                  {c.items.length>0 && <circle cx={CX+Math.cos(a)*pr} cy={CX+Math.sin(a)*pr} r="4" fill={T.accent}/>}
-                  <text x={lx} y={ly-4} textAnchor="middle" fontSize="9" fontWeight="600" fill={T.sub}>
-                    {c.key.slice(0,4).toUpperCase()}
-                  </text>
-                  <text x={lx} y={ly+8} textAnchor="middle" fontSize="8" fill={T.muted}>{c.items.length}</text>
+                  {c.n > 0 && <circle cx={CX+cos*radio(c.n)} cy={CY+sin*radio(c.n)} r="4" fill={T.accent}/>}
+                  <text x={lx} y={y1} textAnchor={anchor} fontSize="11.5" fontWeight="600" fill={T.text} fontFamily={FONT}>{c.key}</text>
+                  <text x={lx} y={y1+13} textAnchor={anchor} fontSize="10.5" fill={T.muted} fontFamily={FONT}>{c.n}</text>
                 </g>
               );
             })}
@@ -1737,6 +1822,23 @@ function claveABytes(b64) {
 async function registroSW() {
   if (!("serviceWorker" in navigator)) return null;
   return (await navigator.serviceWorker.getRegistration()) || null;
+}
+
+// Avisa al servidor que hoy se leyó el artículo (fecha y días de racha), para
+// que el recordatorio de las 20:00 no le llegue a quien ya leyó. Una vez por día.
+// Sin aviso activo no se envía nada. En simulación el servidor no lo guarda.
+async function informarLectura(fecha, racha) {
+  const marca = `${fecha}:${racha}`;
+  try { if (localStorage.getItem("ingeniedia-lectura-informada") === marca) return; } catch {}
+  try {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+    const reg = await navigator.serviceWorker.getRegistration();
+    const sub = reg && await reg.pushManager.getSubscription();
+    if (!sub) return;
+    const r = await fetch("/api/lectura", { method:"POST", headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ endpoint: sub.endpoint, fecha, racha, simulada: !!FECHA_SIMULADA }) });
+    if (r.ok) { try { localStorage.setItem("ingeniedia-lectura-informada", marca); } catch {} }
+  } catch {}
 }
 
 function AvisoDiario({ T, showToast }) {
@@ -1813,8 +1915,8 @@ function AvisoDiario({ T, showToast }) {
     "cargando":   "Revisando el estado del aviso…",
     "no-soporta": "Para recibir el aviso diario, instala la app en tu teléfono Android desde Chrome (menú ⋮ → Instalar app).",
     "bloqueado":  "Las notificaciones están bloqueadas para IngenieDía. Actívalas en los ajustes del teléfono (Ajustes → Apps → IngenieDía → Notificaciones) y vuelve aquí.",
-    "activo":     "Recibirás un aviso cada mañana, alrededor de las 8:00, los días que haya artículo nuevo.",
-    "inactivo":   "Activa el aviso para que te llegue el artículo del día cada mañana, alrededor de las 8:00.",
+    "activo":     "Recibirás el artículo del día a mediodía, y a las 20:00 un recordatorio si tu racha está en peligro.",
+    "inactivo":   "Activa el aviso para recibir el artículo del día a mediodía y un recordatorio a las 20:00 si tu racha está en peligro.",
   }[estado];
 
   return (
@@ -2508,16 +2610,9 @@ function RevisionView({ onSalir }) {
 // Pantalla de carga: igual a la de inicio de Android (fondo oscuro y rayo) más el lema.
 // index.html muestra la misma pantalla antes de que cargue el código.
 function PantallaCarga() {
-  // Mismas clases que index.html (.carga): el rayo queda centrado igual que en la pantalla de Android.
-  return (
-    <div className="carga">
-      <img src="/icons/icon-192.png" alt=""/>
-      <div className="lema">
-        <p className="t">IngenieDía</p>
-        <p className="s">Tu dosis diaria de ingeniería</p>
-      </div>
-    </div>
-  );
+  // La pantalla de carga vive en index.html (#carga), fuera de React, para que su
+  // animación no se reinicie. Mientras carga, React solo deja el fondo oscuro.
+  return <div style={{ position:"fixed", inset:0, background:"#0f1117" }}/>;
 }
 
 export default function App() {
@@ -2550,6 +2645,11 @@ export default function App() {
   const mesActual = mesDe(state.selectedKey || hoyKey());
   useEffect(() => { verMes(mesActual); }, [mesActual, verMes]);
 
+  // Al abrir el Archivo: todos los meses publicados hasta hoy, para el buscador.
+  useEffect(() => {
+    if (ready && state.tab === "archive") mesesHasta(hoyKey()).forEach(verMes);
+  }, [ready, state.tab, verMes]);
+
   // Los meses de lo guardado y leído, para que el Archivo los muestre.
   useEffect(() => {
     if (!ready) return;
@@ -2562,6 +2662,13 @@ export default function App() {
       setStateRaw(v); storePersist(v); setReady(true);
     });
   }, []);
+
+  // Recordatorio de racha (20:00): cuando el artículo de hoy suma a la racha,
+  // se avisa al servidor, solo si el aviso diario está activo en este teléfono.
+  useEffect(() => {
+    if (!ready || state.lastReadDate !== hoyKey() || !(state.streakCount >= 1)) return;
+    informarLectura(state.lastReadDate, state.streakCount);
+  }, [ready, state.lastReadDate, state.streakCount]);
 
   // Al volver a la app (por ejemplo, al día siguiente), se recalcula la racha.
   useEffect(() => {
@@ -2628,12 +2735,23 @@ export default function App() {
         return (
           <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
             {aviso}
+            <TarjetaSondeo T={T} state={state} setState={setState}/>
             <TodayView {...props} scrollRef={scrollRef}/>
           </div>
         );
       }
     }
   }
+
+  // Al terminar la carga (o en modo revisión), se desvanece y se quita #carga.
+  useEffect(() => {
+    if (!revision && (!ready || cargando)) return;
+    const el = document.getElementById("carga");
+    if (!el) return;
+    el.classList.add("fuera");
+    const t = setTimeout(() => el.remove(), 300);
+    return () => clearTimeout(t);
+  }, [revision, ready, cargando]);
 
   if (!revision && (!ready || cargando)) return <PantallaCarga/>;
 
