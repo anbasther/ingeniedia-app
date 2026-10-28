@@ -8,19 +8,12 @@
 // envía el recordatorio de ejemplo a todos los suscritos.
 const webpush = require("web-push");
 const { baseDeDatos, hoyEnChile, CLAVE_SUSCRIPCIONES } = require("./_comun");
+const { articulosDelMes } = require("./_contenido");
 
 function autorizado(req) {
   const secreto = process.env.CRON_SECRET;
   if (!secreto) return false;
   return req.headers.authorization === `Bearer ${secreto}` || req.query.clave === secreto;
-}
-
-async function hayArticuloHoy(req, hoy) {
-  const proto = req.headers["x-forwarded-proto"] || "https";
-  const r = await fetch(`${proto}://${req.headers.host}/contenido/${hoy.slice(0,7)}.json`, { cache: "no-store" });
-  if (!r.ok) return false;
-  const mes = await r.json();
-  return !!(mes.articulos || {})[hoy];
 }
 
 const mensaje = n => ({
@@ -41,8 +34,15 @@ module.exports = async (req, res) => {
     const hoy = hoyEnChile();
     const ayer = hoyEnChile(new Date(new Date(`${hoy}T12:00:00Z`).getTime() - 864e5));
     const prueba = req.query.prueba === "1";
-    if (!prueba && !(await hayArticuloHoy(req, hoy)))
-      return res.status(200).json({ hoy, enviados: 0, motivo: "No hay artículo publicado para hoy." });
+    if (!prueba) {
+      const articulos = await articulosDelMes(hoy.slice(0, 7));
+      if (!articulos) {
+        console.error("aviso-racha: no se pudo leer el contenido del mes", hoy);
+        return res.status(500).json({ hoy, enviados: 0, error: "No se pudo leer el contenido del mes." });
+      }
+      if (!articulos[hoy])
+        return res.status(200).json({ hoy, enviados: 0, motivo: "No hay artículo publicado para hoy." });
+    }
 
     const db = baseDeDatos();
     const todas = (await db.hgetall(CLAVE_SUSCRIPCIONES)) || {};
@@ -62,6 +62,7 @@ module.exports = async (req, res) => {
         } else fallidos++;
       }
     }));
+    console.log("aviso-racha:", JSON.stringify({ hoy, ayer, prueba, enviados, omitidos, eliminados, fallidos }));
     return res.status(200).json({ hoy, ayer, prueba, enviados, omitidos, eliminados, fallidos });
   } catch (e) {
     return res.status(500).json({ error: e.message });

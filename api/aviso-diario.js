@@ -7,6 +7,7 @@
 // envía un aviso de prueba aunque hoy no haya artículo.
 const webpush = require("web-push");
 const { baseDeDatos, hoyEnChile, CLAVE_SUSCRIPCIONES } = require("./_comun");
+const { articulosDelMes } = require("./_contenido");
 
 // Igual que CATEGORIAS en App.jsx: índice 0 = domingo.
 const CATEGORIA_POR_DIA = ["IA","Electricidad","Mecánica","Automatización","Electrónica","Informática","Energía"];
@@ -15,14 +16,6 @@ function autorizado(req) {
   const secreto = process.env.CRON_SECRET;
   if (!secreto) return false;
   return req.headers.authorization === `Bearer ${secreto}` || req.query.clave === secreto;
-}
-
-async function articuloDeHoy(req, hoy) {
-  const proto = req.headers["x-forwarded-proto"] || "https";
-  const r = await fetch(`${proto}://${req.headers.host}/contenido/${hoy.slice(0,7)}.json`, { cache: "no-store" });
-  if (!r.ok) return null;
-  const mes = await r.json();
-  return (mes.articulos || {})[hoy] || null;
 }
 
 module.exports = async (req, res) => {
@@ -39,7 +32,12 @@ module.exports = async (req, res) => {
     if (prueba) {
       aviso = { title: "IngenieDía · prueba", body: "Si ves esto, los avisos diarios funcionan.", url: "/" };
     } else {
-      const art = await articuloDeHoy(req, hoy);
+      const articulos = await articulosDelMes(hoy.slice(0, 7));
+      if (!articulos) {
+        console.error("aviso-diario: no se pudo leer el contenido del mes", hoy);
+        return res.status(500).json({ hoy, enviados: 0, error: "No se pudo leer el contenido del mes." });
+      }
+      const art = articulos[hoy];
       if (!art) return res.status(200).json({ hoy, enviados: 0, motivo: "No hay artículo publicado para hoy." });
       const dia = new Date(`${hoy}T12:00:00Z`).getUTCDay();
       aviso = { title: `IngenieDía · ${art.shortCategory || CATEGORIA_POR_DIA[dia]}`, body: art.title, url: "/" };
@@ -60,6 +58,7 @@ module.exports = async (req, res) => {
         } else fallidos++;
       }
     }));
+    console.log("aviso-diario:", JSON.stringify({ hoy, prueba, enviados, eliminados, fallidos }));
     return res.status(200).json({ hoy, prueba, enviados, eliminados, fallidos });
   } catch (e) {
     return res.status(500).json({ error: e.message });
