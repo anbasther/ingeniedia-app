@@ -9,5 +9,13 @@
       "path": "/api/aviso-racha",
       "schedule": "0 23 * * *"
     }
-  ]
+  ],
+  "functions": {
+    "api/aviso-diario.js": {
+      "includeFiles": "public/contenido/**"
+    },
+    "api/aviso-racha.js": {
+      "includeFiles": "public/contenido/**"
+    }
+  }
 }
