@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo, useLayoutEffect } from "react";
 
 // ═══════════════════════════════════════════════════
 // FONT
@@ -45,7 +45,7 @@ const hoyKey = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 };
-const APP_VERSION = "0.6.2";
+const APP_VERSION = "0.6.3";
 const CORREO_CONTACTO = "anbasther@gmail.com";
 
 // Aviso que acompaña a cada artículo. El texto completo está en /terminos.
@@ -62,7 +62,19 @@ const FONT        = "'IBM Plex Sans', system-ui, sans-serif";
 // x_{CM} → x con CM abajo; m/s^{2} → m/s con 2 arriba.
 // _{x} subíndice · ^{x} superíndice · *{x} mención a una fuente (cursiva)
 const MARCA_INDICE = /([_^*])\{([^{}]*)\}/g;
+
+// Espacio fijo (v0.6.3): un número y su unidad («4 mA», «50 Hz», «30 %») y los
+// lados de « = » no se separan al final de una línea. Se aplica al mostrar el
+// texto, así que corrige también lo ya publicado sin tocar los artículos.
+const UNIDAD = "(?:%|°C?|Ω|(?:[kMGmµun])?(?:Wh|VA|V|A|W|Hz|Ω|N·m|N|Pa|J|F|H|B|b|g|s|m)|bits?|bytes?|rpm|bar|atm|min|kg|Nm\\^\\{3\\}|Nm)";
+const NUM_UNIDAD = new RegExp(`(\\d) (?=${UNIDAD}(?![A-Za-zÁÉÍÓÚÑáéíóúñ]))`, "g");
+function espaciosFijos(texto) {
+  if (typeof texto !== "string") return texto;
+  return texto.replace(NUM_UNIDAD, "$1\u00A0").replace(/ (=|≈|≤|≥) /g, "\u00A0$1\u00A0");
+}
+
 function conIndices(texto) {
+  texto = espaciosFijos(texto);
   if (typeof texto !== "string" || !/[_^*]\{/.test(texto)) return texto;
   const partes = []; let ultimo = 0, m, k = 0;
   MARCA_INDICE.lastIndex = 0;
@@ -227,7 +239,7 @@ const DEFAULT_STATE = {
   liked:[], disliked:[], saved:[], read:[],
   notificationsOn:true, notifTime:"08:00",
   userName:"", userEmail:"",
-  onboardingDone:false, streakCount:0, lastReadDate:"",
+  onboardingDone:false, tourVisto:false, archivoTodos:false, streakCount:0, lastReadDate:"",
 };
 
 const toggleArr = (arr,val) => arr.includes(val) ? arr.filter(x=>x!==val) : [...arr,val];
@@ -237,6 +249,26 @@ const applyReaction = (state,key,dir) => {
   const miss = dir==="like"?"disliked":"liked";
   return { ...state, [hit]:toggleArr(state[hit],key), [miss]:state[miss].filter(x=>x!==key) };
 };
+
+// Conteo anónimo por artículo (v0.6.3): suma o resta 1 al total del artículo.
+// No envía nada del teléfono ni de la persona. Con ?simular va a una clave aparte.
+function enviarInteraccion(fecha, tipo, delta = 1) {
+  try {
+    fetch("/api/interaccion", { method:"POST", keepalive:true, headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ fecha, tipo, delta, simulada: !!FECHA_SIMULADA }) }).catch(() => {});
+  } catch {}
+}
+// Al tocar 👍/👎: +1 al marcar, −1 al desmarcar; cambiar de opinión resta al otro.
+function informarReaccion(state, key, dir) {
+  const hit  = dir === "like" ? "liked" : "disliked";
+  const miss = dir === "like" ? "disliked" : "liked";
+  const tipo = t => t === "liked" ? "me-gusta" : "no-me-gusta";
+  if (state[hit].includes(key)) enviarInteraccion(key, tipo(hit), -1);
+  else {
+    enviarInteraccion(key, tipo(hit), 1);
+    if (state[miss].includes(key)) enviarInteraccion(key, tipo(miss), -1);
+  }
+}
 
 function ayerDe(fechaKey) {
   const [y,m,d] = fechaKey.split("-").map(Number);
@@ -731,10 +763,10 @@ function usePressable() {
 // ═══════════════════════════════════════════════════
 // PRIMITIVE COMPONENTS
 // ═══════════════════════════════════════════════════
-function PressBtn({ onClick, children, style:ex={}, disabled=false, label }) {
+function PressBtn({ onClick, children, style:ex={}, disabled=false, label, tour }) {
   const { pressed, handlers } = usePressable();
   return (
-    <button aria-label={label} disabled={disabled} onClick={onClick} {...handlers}
+    <button aria-label={label} data-tour={tour} disabled={disabled} onClick={onClick} {...handlers}
       style={{ ...ex, transform: pressed && !disabled ? "scale(0.94)" : "scale(1)",
         transition: `transform .1s${ex.transition ? ", "+ex.transition : ""}` }}>
       {children}
@@ -857,54 +889,142 @@ function AvisoReferencial({ T }) {
 }
 
 // ═══════════════════════════════════════════════════
-// ONBOARDING
+// TOUR (v0.6.3, textos aprobados 26 oct; paso 5 ajustado 28 oct)
 // ═══════════════════════════════════════════════════
-const SLIDES = [
-  { icon:"⚡", title:"Bienvenido a IngenieDía",
-    body:"Un tema de ingeniería por día. Corto, técnico y relevante. Perfecto para mantenerte al día en minutos.", cta:"Siguiente" },
-  { icon:"📅", title:"Un tema diario para todos",
-    body:"Cada día publicamos un solo tema técnico para toda la comunidad. Explora publicaciones anteriores en el calendario.", cta:"Siguiente" },
-  { icon:"🔖", title:"Guarda lo que te sirve",
-    body:"Marca artículos, guárdalos en tu archivo, y mantén tu racha diaria de lectura activa.", cta:"Comenzar" },
+// Recorrido sobre la app real: oscurece la pantalla e ilumina el elemento de cada
+// paso. Reemplaza la bienvenida antigua y se ve una sola vez (state.tourVisto),
+// también para quienes ya habían pasado la bienvenida. «Omitir» lleva al último
+// paso, el de los Términos de uso, así que siempre se aceptan.
+const TOUR = [
+  { sel:null, titulo:"¡Bienvenido a IngenieDía!",
+    texto:"Cada día, un artículo breve de ingeniería que se lee en unos 2 minutos. Te mostramos cómo funciona en 30 segundos." },
+  { sel:"articulo", titulo:"Un artículo nuevo cada día",
+    texto:"Cada día de la semana es un área: lunes Electricidad, martes Mecánica, miércoles Automatización, jueves Electrónica, viernes Informática, sábado Energía y domingo IA." },
+  { sel:"racha", titulo:"Tu racha 🔥",
+    texto:"Suma un día cuando lees el artículo de hoy cumpliendo dos condiciones: 1) llegas hasta el final del artículo y 2) te quedas al menos la mitad de su tiempo de lectura, sin salir (por ejemplo, 1 minuto seguido en un artículo de 2). Leer artículos de días anteriores no suma a la racha." },
+  { sel:"fecha", titulo:"Días anteriores",
+    texto:"Toca la fecha para abrir el calendario e ir a cualquier día anterior." },
+  { sel:"nav-archive", titulo:"Archivo y buscador",
+    texto:"Aquí quedan tus artículos guardados. El buscador encuentra cualquier artículo publicado, por tema o palabra, y puedes filtrar por área." },
+  { sel:"botones", titulo:"Guarda lo que te sirve",
+    texto:"Usa el marcador para guardar un artículo, y 👍 o 👎 para decirnos si te gustó." },
+  { sel:"comentarios", titulo:"Tu opinión cuenta",
+    texto:"Al final de cada artículo puedes dejar un comentario anónimo o proponer un tema." },
+  { sel:"nav-profile", titulo:"No te pierdas ningún día", aviso:true,
+    texto:"Activa el aviso: te llega el artículo a mediodía, y a las 20:00 un recordatorio si tu racha está en peligro." },
+  { sel:null, titulo:"Antes de comenzar", final:true, texto:null },
 ];
 
-function Onboarding({ onDone, T }) {
-  const [slide, setSlide] = useState(0);
-  const { icon, title, body, cta } = SLIDES[slide];
-  const isLast = slide === SLIDES.length - 1;
+function Tour({ T, contenedorRef, onFin, showToast }) {
+  const [paso, setPaso] = useState(0);
+  const [caja, setCaja] = useState(null);       // rectángulo iluminado, relativo al contenedor
+  const [ocupado, setOcupado] = useState(false);
+  const p = TOUR[paso];
+
+  // Ubica el elemento del paso (lo desplaza a la vista si hace falta).
+  useLayoutEffect(() => {
+    setCaja(null);
+    if (!p.sel) return;
+    const cont = contenedorRef.current;
+    const el = cont?.querySelector(`[data-tour="${p.sel}"]`);
+    if (!el) return;
+    el.scrollIntoView({ block:"center", behavior:"auto" });
+    const medir = () => {
+      const a = el.getBoundingClientRect(), b = cont.getBoundingClientRect();
+      if (!a.width || !a.height) return setCaja(null);
+      const m = 6;
+      const top = Math.max(4, a.top - b.top - m), left = Math.max(4, a.left - b.left - m);
+      setCaja({ top, left,
+        width: Math.min(b.width - 8, a.width + m*2), height: Math.min(b.height - 8, a.bottom - b.top + m - top) });
+    };
+    medir();
+    const t = setTimeout(medir, 120);
+    window.addEventListener("resize", medir);
+    return () => { clearTimeout(t); window.removeEventListener("resize", medir); };
+  }, [paso]);
+
+  const siguiente = () => setPaso(n => Math.min(n + 1, TOUR.length - 1));
+  const omitir    = () => setPaso(TOUR.length - 1);
+
+  async function activarAviso() {
+    setOcupado(true);
+    try {
+      const soporta = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+      if (!soporta) { showToast("Este teléfono no admite avisos desde aquí"); return; }
+      const res = await suscribirAviso();
+      showToast(res === "activo" ? "Aviso diario activado"
+        : res === "bloqueado" ? "Avisos bloqueados: actívalos en los ajustes del teléfono"
+        : "Puedes activarlo después en Perfil");
+    } catch {
+      showToast("No se pudo activar. Inténtalo en Perfil → Notificaciones");
+    } finally { setOcupado(false); siguiente(); }
+  }
+
+  // Tarjeta: bajo el elemento si está en la mitad de arriba; si no, sobre él.
+  const cont = contenedorRef.current;
+  const altoCont = cont ? cont.getBoundingClientRect().height : 700;
+  const arriba = caja && (caja.top + caja.height / 2) > altoCont / 2;
+  const posTarjeta = !caja ? { top:"50%", transform:"translateY(-50%)" }
+    : arriba ? { bottom: altoCont - caja.top + 10 } : { top: caja.top + caja.height + 10 };
+
+  const enlace = { color:T.accent, textDecoration:"underline" };
+  const botonPrincipal = { flex:1, padding:"11px 0", borderRadius:13, background:T.accent, border:"none",
+    fontSize:13.5, fontWeight:700, color:"#0f172a", cursor:"pointer", fontFamily:FONT };
+  const botonSecundario = { background:"none", border:"none", fontSize:12.5, color:T.muted, cursor:"pointer",
+    padding:"10px 6px", fontFamily:FONT };
+
   return (
-    <div style={{ position:"absolute", inset:0, zIndex:300, background:T.bg,
-      display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"32px 28px" }}>
-      <style>{`@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}`}</style>
-      <div style={{ display:"flex", gap:6, marginBottom:40 }}>
-        {SLIDES.map((_,i) => (
-          <span key={i} style={{ width: i===slide ? 20 : 6, height:6, borderRadius:3,
-            background: i===slide ? T.accent : T.border, transition:"width .25s, background .25s" }}/>
-        ))}
+    <div role="dialog" aria-modal="true" aria-label={p.titulo}
+      style={{ position:"absolute", inset:0, zIndex:300 }}>
+      {/* Fondo oscuro con un hueco sobre el elemento del paso */}
+      {caja
+        ? <div style={{ position:"absolute", top:caja.top, left:caja.left, width:caja.width, height:caja.height,
+            borderRadius:16, boxShadow:"0 0 0 9999px rgba(3,6,14,0.78)", border:`2px solid ${T.accent}`,
+            transition:"all .25s ease", pointerEvents:"none" }}/>
+        : <div style={{ position:"absolute", inset:0, background:"rgba(3,6,14,0.78)" }}/>}
+      {/* Bloquea los toques sobre la app mientras dura el tour */}
+      <div style={{ position:"absolute", inset:0 }}/>
+
+      <div key={paso} style={{ position:"absolute", left:14, right:14, ...posTarjeta,
+        background:T.card, border:`1px solid ${T.border}`, borderRadius:18, padding:"16px 16px 10px",
+        boxShadow:"0 10px 40px rgba(0,0,0,0.45)", animation:"fadeUp .3s ease" }}>
+        <style>{`@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1}}`}</style>
+        <div style={{ display:"flex", gap:5, marginBottom:10 }}>
+          {TOUR.map((_, i) => (
+            <span key={i} style={{ width: i === paso ? 16 : 5, height:5, borderRadius:3,
+              background: i === paso ? T.accent : T.border, transition:"width .25s" }}/>
+          ))}
+        </div>
+        <h2 style={{ fontSize:16.5, fontWeight:700, color:T.text, margin:"0 0 6px", lineHeight:1.3 }}>{p.titulo}</h2>
+        {p.final ? (
+          <p style={{ ...JUSTIFICADO, fontSize:13, color:T.sub, lineHeight:1.6, margin:"0 0 14px" }}>
+            IngenieDía es una guía referencial de carácter educativo y no reemplaza la normativa oficial vigente.
+            Al comenzar aceptas los{" "}
+            <a href="/terminos" target="_blank" rel="noopener" style={enlace}>Términos de uso</a>
+            {" "}y la{" "}
+            <a href="/privacidad" target="_blank" rel="noopener" style={enlace}>Política de privacidad</a>.
+          </p>
+        ) : (
+          <p style={{ ...JUSTIFICADO, fontSize:13, color:T.sub, lineHeight:1.6, margin:"0 0 14px" }}>{p.texto}</p>
+        )}
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          {p.final ? (
+            <button onClick={onFin} style={botonPrincipal}>Comenzar</button>
+          ) : p.aviso ? (
+            <>
+              <button onClick={siguiente} disabled={ocupado} style={botonSecundario}>Ahora no</button>
+              <button onClick={activarAviso} disabled={ocupado} style={{ ...botonPrincipal, opacity: ocupado ? .6 : 1 }}>
+                {ocupado ? "Un momento…" : "Activar aviso"}
+              </button>
+            </>
+          ) : (
+            <>
+              <button onClick={omitir} style={botonSecundario}>Omitir</button>
+              <button onClick={siguiente} style={botonPrincipal}>Siguiente</button>
+            </>
+          )}
+        </div>
       </div>
-      <div key={slide} style={{ fontSize:56, marginBottom:24, animation:"fadeUp .35s ease" }}>{icon}</div>
-      <h2 style={{ fontSize:20, fontWeight:700, color:T.text, textAlign:"center", margin:"0 0 12px", lineHeight:1.3 }}>{title}</h2>
-      <p style={{ ...JUSTIFICADO, textAlign:"center", fontSize:13, color:T.sub, lineHeight:1.7, margin:"0 0 40px" }}>{body}</p>
-      <PressBtn onClick={() => isLast ? onDone() : setSlide(s => s+1)}
-        style={{ width:"100%", padding:"14px 0", borderRadius:16, background:T.accent, border:"none",
-          fontSize:14, fontWeight:700, color:"#0f172a", cursor:"pointer", letterSpacing:.2 }}>
-        {cta}
-      </PressBtn>
-      {isLast && (
-        <p style={{ ...JUSTIFICADO, textAlign:"center", marginTop:16, fontSize:11, color:T.muted, lineHeight:1.55 }}>
-          IngenieDía es una guía referencial y no reemplaza la normativa oficial.
-          Al comenzar aceptas los{" "}
-          <a href="/terminos" target="_blank" rel="noopener" style={{ color:T.muted, textDecoration:"underline" }}>Términos de uso</a>
-          {" "}y la{" "}
-          <a href="/privacidad" target="_blank" rel="noopener" style={{ color:T.muted, textDecoration:"underline" }}>Política de privacidad</a>.
-        </p>
-      )}
-      {!isLast && (
-        <button onClick={onDone}
-          style={{ marginTop:14, background:"none", border:"none", fontSize:12, color:T.muted, cursor:"pointer" }}>
-          Omitir
-        </button>
-      )}
     </div>
   );
 }
@@ -946,7 +1066,7 @@ function HeaderCalendar({ state, setState, T, articulos, onVerMes }) {
   const nm = () => mo===11 ? (setYr(y=>y+1), setMo(0))  : setMo(m=>m+1);
 
   return (
-    <div ref={ref} style={{ position:"relative", display:"inline-block" }}>
+    <div ref={ref} data-tour="fecha" style={{ position:"relative", display:"inline-block" }}>
       <PressBtn onClick={() => setOpen(o => !o)}
         style={{ marginTop:5, display:"inline-flex", alignItems:"center", gap:5,
           background: open ? T.accentBg : T.pill, border:`1px solid ${open ? T.accent : T.border}`,
@@ -1464,6 +1584,7 @@ function TodayView({ state, setState, T, showToast, scrollRef, articulos }) {
       if (!esHoy) {
         contadoRef.current = true;
         setState(s => ({ ...s, read: [...new Set([...(s.read||[]), key])] }));
+        enviarInteraccion(key, "lectura");
         showToast("Artículo completado ✓");
         return;
       }
@@ -1472,6 +1593,7 @@ function TodayView({ state, setState, T, showToast, scrollRef, articulos }) {
       if (seguido < umbral) return;
       contadoRef.current = true;
       setState(s => computeStreak({ ...s, read: [...new Set([...(s.read||[]), key])] }));
+      if (!isRead) enviarInteraccion(key, "lectura");
       showToast("¡Día sumado a tu racha! 🔥");
     };
     const alCambiarVisibilidad = () => {
@@ -1514,7 +1636,7 @@ function TodayView({ state, setState, T, showToast, scrollRef, articulos }) {
         opacity: visible ? 1 : 0, transition:"opacity .3s ease" }}>
 
         {/* Hero card */}
-        <div style={{ borderRadius:20, overflow:"hidden", border:`1px solid ${T.border}`, background:T.card }}>
+        <div data-tour="articulo" style={{ borderRadius:20, overflow:"hidden", border:`1px solid ${T.border}`, background:T.card }}>
           <div style={{ height:180, position:"relative", overflow:"hidden", background:"#0a0f1e" }}>
             {HeroIllu
               ? <HeroIllu color={colorDe(art.shortCategory)}/>
@@ -1558,10 +1680,10 @@ function TodayView({ state, setState, T, showToast, scrollRef, articulos }) {
               </span>
             </div>
             <p style={{ ...TEXTO_LARGO, fontSize:12, color:T.sub, lineHeight:1.7, marginBottom:12 }}>{conIndices(art.description)}</p>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <div data-tour="botones" style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <div style={{ display:"flex", gap:7 }}>
-                <IBtn active={liked}    label="Me gusta"    T={T} onClick={() => setState(s => applyReaction(s,key,"like"))}><Ic.ThumbUp/></IBtn>
-                <IBtn active={disliked} label="No me gusta" T={T} onClick={() => setState(s => applyReaction(s,key,"dislike"))}><Ic.ThumbDn/></IBtn>
+                <IBtn active={liked}    label="Me gusta"    T={T} onClick={() => { informarReaccion(state,key,"like");    setState(s => applyReaction(s,key,"like")); }}><Ic.ThumbUp/></IBtn>
+                <IBtn active={disliked} label="No me gusta" T={T} onClick={() => { informarReaccion(state,key,"dislike"); setState(s => applyReaction(s,key,"dislike")); }}><Ic.ThumbDn/></IBtn>
               </div>
               <div style={{ display:"flex", gap:7 }}>
                 <IBtn active={saved} label="Guardar" T={T}
@@ -1593,10 +1715,10 @@ function TodayView({ state, setState, T, showToast, scrollRef, articulos }) {
           <AvisoReferencial T={T}/>
         </div>
 
-        <Comentarios T={T} art={art} fecha={key} state={state} setState={setState}/>
+        <div data-tour="comentarios"><Comentarios T={T} art={art} fecha={key} state={state} setState={setState}/></div>
 
         {/* Acceso al Archivo */}
-        <PressBtn onClick={() => setState(s => ({ ...s, tab:"archive" }))}
+        <PressBtn onClick={() => { setState(s => ({ ...s, tab:"archive", archivoTodos:true })); if (scrollRef?.current) scrollRef.current.scrollTop = 0; }}
           style={{ width:"100%", borderRadius:18, border:`1px solid ${T.border}`, background:T.card,
             padding:"13px 15px", cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", gap:12 }}>
           <span style={{ width:36, height:36, borderRadius:10, flexShrink:0, background:T.accentBg,
@@ -1617,12 +1739,17 @@ function TodayView({ state, setState, T, showToast, scrollRef, articulos }) {
 // ═══════════════════════════════════════════════════
 // ARCHIVE VIEW
 // ═══════════════════════════════════════════════════
-// Archivo: todos los artículos publicados hasta hoy (guardados o no), con
-// buscador y filtros. Nunca muestra días futuros. Debajo, el mapa de lo guardado.
+// Archivo, opción A (aprobada 28 oct):
+// · Sin buscar, muestra solo los artículos guardados.
+// · El buscador busca en todos los artículos publicados e indica cuántos hay.
+// · «Ver artículos anteriores» (en Hoy) abre la lista completa (state.archivoTodos);
+//   el chip «Todos los artículos ✕» vuelve a los guardados.
+// Se puede filtrar por área. Nunca muestra días futuros. Debajo, el mapa de lo guardado.
 function ArchiveView({ state, setState, T, articulos }) {
   const [query,  setQuery]  = useState("");
-  const [filtro, setFiltro] = useState("todos");   // "todos" | "guardados" | un área
+  const [filtro, setFiltro] = useState("todas");   // "todas" | un área
   const hoy = hoyKey();
+  const verTodos = !!state.archivoTodos;
 
   const todos = useMemo(() => Object.keys(articulos)
     .filter(k => k <= hoy && (k >= PRIMER_MES || state.saved.includes(k)))
@@ -1642,16 +1769,19 @@ function ArchiveView({ state, setState, T, articulos }) {
   const maxV = Math.max(1, ...byCat.map(c => c.n));
 
   const palabras = normalizar(query).split(/\s+/).filter(Boolean);
-  const lista = (filtro === "todos" ? todos : filtro === "guardados" ? guardados
-                  : todos.filter(x => x.art.shortCategory === filtro))
+  const buscando = palabras.length > 0;
+  const base  = buscando || verTodos ? todos : guardados;
+  const lista = base
+    .filter(x => filtro === "todas" || x.art.shortCategory === filtro)
     .filter(x => palabras.every(p => x.texto.includes(p)));
 
   const abrir = k => setState(s => ({ ...s, selectedKey:k, tab:"today" }));
+  const quitarTodos = () => setState(s => ({ ...s, archivoTodos:false }));
 
   const chip = (id, texto) => {
     const on = filtro === id;
     return (
-      <button key={id} onClick={() => setFiltro(on && id !== "todos" ? "todos" : id)}
+      <button key={id} onClick={() => setFiltro(on ? "todas" : id)}
         style={{ flexShrink:0, borderRadius:20, padding:"6px 12px", fontSize:11.5, fontWeight:600, cursor:"pointer",
           fontFamily:FONT, border:`1px solid ${on ? T.accent : T.border}`,
           background: on ? T.accentBg : T.card, color: on ? T.accent : T.sub }}>
@@ -1688,20 +1818,35 @@ function ArchiveView({ state, setState, T, articulos }) {
             padding:"10px 12px 10px 34px", color:T.text, fontSize:13, outline:"none", boxSizing:"border-box", fontFamily:FONT }}/>
       </div>
 
-      {/* Filtros */}
+      {/* Filtros: lista completa (si se abrió desde Hoy) y áreas */}
       <div style={{ display:"flex", gap:6, overflowX:"auto", paddingBottom:2, scrollbarWidth:"none" }}>
-        {chip("todos", "Todos")}
-        {chip("guardados", `Guardados (${guardados.length})`)}
+        {verTodos && !buscando && (
+          <button onClick={quitarTodos}
+            style={{ flexShrink:0, borderRadius:20, padding:"6px 12px", fontSize:11.5, fontWeight:600, cursor:"pointer",
+              fontFamily:FONT, border:`1px solid ${T.accent}`, background:T.accentBg, color:T.accent }}>
+            Todos los artículos ✕
+          </button>
+        )}
         {CATEGORIES.map(c => chip(c.key, c.key))}
       </div>
+
+      {/* Qué se está mostrando */}
+      <p style={{ fontSize:11.5, color:T.muted, margin:"0 2px" }}>
+        {buscando
+          ? `${lista.length} resultado${lista.length !== 1 ? "s" : ""} en todos los artículos publicados`
+          : verTodos ? "Todos los artículos publicados, del más reciente al más antiguo"
+          : "Tus artículos guardados"}
+      </p>
 
       {/* Lista */}
       <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
         {lista.length === 0 && (
           <p style={{ fontSize:12, color:T.muted, textAlign:"center", padding:"14px 8px", margin:0, lineHeight:1.6 }}>
-            {palabras.length ? `Sin resultados para «${query.trim()}».`
-              : filtro === "guardados" ? "Aún no has guardado artículos. Toca el marcador de un artículo para guardarlo aquí."
-              : "Todavía no hay artículos de esta área."}
+            {buscando ? `Sin resultados para «${query.trim()}».`
+              : !verTodos && filtro === "todas"
+                ? "Aún no has guardado artículos. Toca el marcador de un artículo para guardarlo aquí. Para ver todos los publicados, usa el buscador o toca «Ver artículos anteriores» en Hoy."
+              : verTodos ? "Todavía no hay artículos de esta área."
+              : "No tienes artículos guardados de esta área."}
           </p>
         )}
         {lista.map(({ k, art }) => {
@@ -1730,7 +1875,7 @@ function ArchiveView({ state, setState, T, articulos }) {
       </div>
 
       {/* Mapa de temas guardados */}
-      {!palabras.length && guardados.length > 0 && (filtro === "todos" || filtro === "guardados") && (
+      {!buscando && !verTodos && guardados.length > 0 && filtro === "todas" && (
         <Card T={T}>
           <p style={{ fontSize:13, fontWeight:700, color:T.text, margin:"0 0 3px" }}>Mapa de temas guardados</p>
           <p style={{ fontSize:11, color:T.muted, margin:"0 0 8px" }}>Cuántos artículos guardaste de cada área.</p>
@@ -1841,6 +1986,35 @@ async function informarLectura(fecha, racha) {
   } catch {}
 }
 
+// Pide el permiso y suscribe el teléfono al aviso diario. Devuelve "activo",
+// "bloqueado" o "inactivo"; lanza un error si falla un paso (avisado con alPaso).
+// La usan el Perfil y el paso 8 del tour.
+async function suscribirAviso(alPaso = () => {}) {
+  alPaso("permiso");
+  const permiso = await Notification.requestPermission();
+  if (permiso !== "granted") return permiso === "denied" ? "bloqueado" : "inactivo";
+
+  alPaso("clave");
+  const reg = await registroSW();
+  if (!reg) throw new Error("sin service worker");
+  const rc = await fetch("/api/clave");
+  const { clave, error:errClave } = await rc.json().catch(() => ({}));
+  if (!clave) throw new Error(errClave || `el servidor respondió ${rc.status}`);
+
+  alPaso("suscripcion");
+  const sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: claveABytes(clave) });
+
+  alPaso("guardar");
+  const r = await fetch("/api/suscripciones", { method:"POST",
+    headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ suscripcion: sub.toJSON() }) });
+  if (!r.ok) {
+    const { error:errSrv } = await r.json().catch(() => ({}));
+    await sub.unsubscribe();
+    throw new Error(errSrv || `el servidor respondió ${r.status}`);
+  }
+  return "activo";
+}
+
 function AvisoDiario({ T, showToast }) {
   // "cargando" | "no-soporta" | "bloqueado" | "activo" | "inactivo"
   const [estado, setEstado] = useState("cargando");
@@ -1863,26 +2037,8 @@ function AvisoDiario({ T, showToast }) {
     setOcupado(true); setError("");
     let paso = "permiso";
     try {
-      const permiso = await Notification.requestPermission();
-      if (permiso !== "granted") { setEstado(permiso === "denied" ? "bloqueado" : "inactivo"); return; }
-
-      paso = "clave";
-      const reg = await registroSW();
-      const rc = await fetch("/api/clave");
-      const { clave, error:errClave } = await rc.json().catch(() => ({}));
-      if (!clave) throw new Error(errClave || `el servidor respondió ${rc.status}`);
-
-      paso = "suscripcion";
-      const sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: claveABytes(clave) });
-
-      paso = "guardar";
-      const r = await fetch("/api/suscripciones", { method:"POST",
-        headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ suscripcion: sub.toJSON() }) });
-      if (!r.ok) {
-        const { error:errSrv } = await r.json().catch(() => ({}));
-        await sub.unsubscribe();
-        throw new Error(errSrv || `el servidor respondió ${r.status}`);
-      }
+      const res = await suscribirAviso(p => { paso = p; });
+      if (res !== "activo") { setEstado(res); return; }
       setEstado("activo"); showToast("Aviso diario activado");
     } catch (e) {
       const detalle = e && e.message ? ` (${e.message})` : "";
@@ -2626,6 +2782,7 @@ export default function App() {
   const encuestaMostrada     = useRef(false);
   const esMovil              = useEsMovil();
   const scrollRef            = useRef(null);
+  const cuerpoRef            = useRef(null);
   const toast                = useToast();
   const T                    = THEMES[state.theme] ?? THEMES.dark;
 
@@ -2658,7 +2815,8 @@ export default function App() {
 
   useEffect(() => {
     storeHydrate(DEFAULT_STATE).then(s => {
-      const v = rachaVigente({ ...s, selectedKey: hoyKey() });
+      const v = rachaVigente({ ...s, selectedKey: hoyKey(), archivoTodos:false,
+                               ...(s.tourVisto ? {} : { tab:"today" }) });
       setStateRaw(v); storePersist(v); setReady(true);
     });
   }, []);
@@ -2695,12 +2853,12 @@ export default function App() {
   // Encuesta de cierre: aparece sola una vez por apertura de la app,
   // mientras no se haya respondido. Se puede cerrar con la X.
   useEffect(() => {
-    if (!ready || !state.onboardingDone || encuestaMostrada.current) return;
+    if (!ready || !state.tourVisto || encuestaMostrada.current) return;
     if (faseDe(hoyKey()) === "encuesta" && hoyKey() <= PRUEBA.encuestaHasta && !state.encuestaEnviada) {
       encuestaMostrada.current = true;
       setEncuestaAbierta(true);
     }
-  }, [ready, state.onboardingDone, state.encuestaEnviada]);
+  }, [ready, state.tourVisto, state.encuestaEnviada]);
 
   // Fondo de la página y barra del teléfono con el color del tema,
   // para que no quede un marco de otro color alrededor de la app.
@@ -2721,7 +2879,7 @@ export default function App() {
   }, []);
 
   const setTab = useCallback(t => {
-    setState(s => ({ ...s, tab:t }));
+    setState(s => ({ ...s, tab:t, archivoTodos:false }));
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
   }, [setState]);
 
@@ -2775,16 +2933,20 @@ export default function App() {
       </div>}
 
       {/* Cuerpo de la app */}
-      <div style={{ width:"100%", background:T.bg,
+      <div ref={cuerpoRef} style={{ width:"100%", background:T.bg,
         maxWidth:     esMovil ? "none" : 390,
         borderRadius: esMovil ? 0 : 36,
         border:       esMovil ? "none" : `1.5px solid ${T.border}`,
         height:       esMovil ? "100dvh" : "min(780px, calc(100vh - 100px))",
         overflow:"hidden", display:"flex", flexDirection:"column", position:"relative" }}>
 
-        {/* Onboarding */}
-        {ready && !state.onboardingDone &&
-          <Onboarding onDone={() => setState(s=>({...s,onboardingDone:true}))} T={T}/>}
+        {/* Tour: una sola vez, también para quienes ya vieron la bienvenida antigua */}
+        {ready && !state.tourVisto &&
+          <Tour T={T} contenedorRef={cuerpoRef} showToast={toast.show}
+            onFin={() => {
+              setState(s => ({ ...s, tourVisto:true, onboardingDone:true }));
+              if (scrollRef.current) scrollRef.current.scrollTop = 0;
+            }}/>}
 
         {/* Encuesta de cierre de la etapa de prueba */}
         {encuestaAbierta && (
@@ -2808,7 +2970,7 @@ export default function App() {
           <div style={{ display:"flex", alignItems:"center", gap:7 }}>
             {!esMovil && <span style={{ fontSize:11, fontWeight:700, color:T.text }}>9:41</span>}
             {(state.streakCount||0) > 0 && (
-              <span style={{ fontSize:10, color:"#f97316", display:"flex", alignItems:"center", gap:2,
+              <span data-tour="racha" style={{ fontSize:10, color:"#f97316", display:"flex", alignItems:"center", gap:2,
                 background:"rgba(249,115,22,0.1)", borderRadius:10, padding:"1px 6px" }}>
                 🔥 {state.streakCount}
               </span>
@@ -2852,7 +3014,7 @@ export default function App() {
           {NAV_TABS.map(({ key, label, AIcon, IIcon }) => {
             const active = state.tab === key;
             return (
-              <PressBtn key={key} onClick={() => setTab(key)}
+              <PressBtn key={key} tour={`nav-${key}`} onClick={() => setTab(key)}
                 style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center",
                   justifyContent:"center", gap:2, border:"none", background:"none",
                   cursor:"pointer", padding:0, color: active ? T.accent : T.muted,

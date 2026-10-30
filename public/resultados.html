@@ -49,6 +49,11 @@
   .meta { font-size:12px; color:var(--suave); margin:0 0 3px; }
   .texto { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; font-size:14.5px; }
   .vacio { color:var(--suave); font-size:14px; margin:0; }
+  table.inter { min-width:0; table-layout:fixed; }
+  table.inter th:first-child, table.inter td:first-child { width:auto; }
+  table.inter th:not(:first-child), table.inter td:not(:first-child) { width:52px; font-variant-numeric:tabular-nums; }
+  table.inter td:first-child { overflow-wrap:anywhere; }
+  table.inter .area { display:block; font-size:11.5px; color:var(--suave); }
   #datos { display:none; }
   body.dentro #datos { display:block; }
   body.dentro #acceso { display:none; }
@@ -93,6 +98,12 @@
     </section>
 
     <section class="tarjeta">
+      <h2>Lecturas y reacciones por artículo</h2>
+      <p class="cifra" id="cifra-inter"></p>
+      <div class="tabla"><table class="inter" id="tabla-inter"></table></div>
+    </section>
+
+    <section class="tarjeta">
       <h2>Pregunta rápida: mini quiz</h2>
       <p class="cifra">«¿Te gustaría un mini quiz opcional al final de cada artículo?» (en la app del 26 al 31 de octubre)</p>
       <ul class="lista" id="lista-son"></ul>
@@ -117,6 +128,18 @@
   let clave = "";
   try { clave = sessionStorage.getItem("ingeniedia-clave") || ""; } catch {}
   let ultimo = null;
+  const titulos = {};          // "AAAA-MM-DD" → { title, shortCategory }, desde /contenido
+  const mesesPedidos = new Set();
+  async function cargarTitulos(fechas) {
+    const meses = [...new Set(fechas.map(f => f.slice(0, 7)))].filter(m => !mesesPedidos.has(m));
+    await Promise.all(meses.map(async m => {
+      mesesPedidos.add(m);
+      try {
+        const r = await fetch(`/contenido/${m}.json`, { cache:"no-cache" });
+        if (r.ok) Object.assign(titulos, (await r.json()).articulos || {});
+      } catch {}
+    }));
+  }
 
   function el(tag, props = {}, ...hijos) {
     const e = document.createElement(tag);
@@ -139,6 +162,7 @@
     try { sessionStorage.setItem("ingeniedia-clave", clave); } catch {}
     document.body.classList.add("dentro");
     ultimo = j;
+    await cargarTitulos(Object.keys(j.interacciones || {}));
     pintar(j);
   }
 
@@ -151,6 +175,28 @@
     com.forEach(c => lc.append(el("li", {},
       el("p", { className:"meta", textContent:`${fechaBonita(c.fecha)} · ${c.titulo || "artículo del " + fechaBonita(c.articulo)}` }),
       el("p", { className:"texto", textContent:c.texto }))));
+
+    // Lecturas y reacciones por artículo (conteos anónimos, v0.6.3)
+    const inter = j.interacciones || {};
+    const fechasI = Object.keys(inter).sort((a, b) => b.localeCompare(a));
+    const sum = t => fechasI.reduce((n, f) => n + (inter[f][t] || 0), 0);
+    $("cifra-inter").textContent = fechasI.length
+      ? `${sum("lectura")} lecturas completas · ${sum("me-gusta")} 👍 · ${sum("no-me-gusta")} 👎 · ${fechasI.length} artículos.`
+      : "Aún no hay lecturas ni reacciones registradas.";
+    const ti = $("tabla-inter"); ti.replaceChildren();
+    if (fechasI.length) {
+      ti.append(el("thead", {}, el("tr", {}, el("th", { textContent:"Artículo" }),
+        el("th", { textContent:"Leído" }), el("th", { textContent:"👍" }), el("th", { textContent:"👎" }))));
+      const cu = el("tbody");
+      fechasI.forEach(f => {
+        const a = titulos[f] || {}, v = inter[f];
+        cu.append(el("tr", {},
+          el("td", {}, a.title || "(sin título)", el("span", { className:"area", textContent:`${fechaBonita(f)}${a.shortCategory ? " · " + a.shortCategory : ""}` })),
+          el("td", { textContent: v["lectura"] || 0 }), el("td", { textContent: v["me-gusta"] || 0 }),
+          el("td", { textContent: v["no-me-gusta"] || 0 })));
+      });
+      ti.append(cu);
+    }
 
     // Pregunta rápida (mini quiz)
     const q = (j.sondeo || {}).quiz || {};

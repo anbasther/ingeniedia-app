@@ -29,6 +29,11 @@ const CLAVES_OPINION = {
 };
 const MAX_REGISTROS = 5000; // tope de seguridad por lista
 
+// Conteos anónimos por artículo (v0.6.3): un hash con campos "AAAA-MM-DD:tipo".
+// Solo números, sin ningún dato del teléfono ni de la persona.
+const CLAVES_INTERACCIONES = { real: "ingeniedia:interacciones", simulada: "ingeniedia:interacciones-simuladas" };
+const TIPOS_INTERACCION = ["lectura", "me-gusta", "no-me-gusta"];
+
 const FECHA_VALIDA = /^\d{4}-\d{2}-\d{2}$/;
 
 // Cuerpo de la petición como objeto, venga como texto o ya interpretado.
@@ -45,4 +50,4 @@ async function agregar(db, clave, registro) {
 }
 
 module.exports = { baseDeDatos, hoyEnChile, CLAVE_SUSCRIPCIONES, MAX_SUSCRIPCIONES,
-                   CLAVES_OPINION, FECHA_VALIDA, cuerpo, agregar };
+                   CLAVES_OPINION, CLAVES_INTERACCIONES, TIPOS_INTERACCION, FECHA_VALIDA, cuerpo, agregar };

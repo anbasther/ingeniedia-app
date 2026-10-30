@@ -3,9 +3,9 @@
 // abren desde lo guardado en el teléfono, sin esperar a internet, y se
 // actualizan por detrás para la próxima vez. Los artículos (/contenido) y los
 // datos (/api) siempre van primero a la red. Al cambiar la app, subir VERSION.
-const VERSION = "v9";
+const VERSION = "v10";
 const CACHE = `ingeniedia-${VERSION}`;
-const BASE = ["/", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png",
+const BASE = ["/", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/badge-96.png",
               "/fonts/ibm-plex-sans-500.woff2", "/fonts/ibm-plex-sans-700.woff2"];
 
 self.addEventListener("install", e => {
@@ -83,7 +83,7 @@ self.addEventListener("push", e => {
   e.waitUntil(self.registration.showNotification(d.title || "IngenieDía", {
     body: d.body || "Ya está el artículo de hoy.",
     icon: "/icons/icon-192.png",
-    badge: "/icons/icon-192.png",
+    badge: "/icons/badge-96.png",        // ícono pequeño: silueta blanca del rayo (Android lo pinta en un color)
     tag: d.tag || "articulo-del-dia",   // un aviso nuevo del mismo tipo reemplaza al anterior
     data: { url: d.url || "/" },
   }));

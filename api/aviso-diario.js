@@ -40,7 +40,11 @@ module.exports = async (req, res) => {
       const art = articulos[hoy];
       if (!art) return res.status(200).json({ hoy, enviados: 0, motivo: "No hay artículo publicado para hoy." });
       const dia = new Date(`${hoy}T12:00:00Z`).getUTCDay();
-      aviso = { title: `IngenieDía · ${art.shortCategory || CATEGORIA_POR_DIA[dia]}`, body: art.title, url: "/" };
+      // Texto aprobado el 28 oct: «⚡ ¡Hora de tu dosis de ingeniería!» / «⏱️ Solo N minutos: <título> (<área>)».
+      const min = Math.max(1, Number(art.readingMin) || 2);
+      const area = art.shortCategory || CATEGORIA_POR_DIA[dia];
+      aviso = { title: "⚡ ¡Hora de tu dosis de ingeniería!",
+                body: `⏱️ Solo ${min} minuto${min === 1 ? "" : "s"}: ${art.title} (${area})`, url: "/" };
     }
 
     const db = baseDeDatos();

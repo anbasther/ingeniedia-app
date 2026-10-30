@@ -1,8 +1,9 @@
-// GET    /api/resultados[?simulada=1]  → encuesta (conteos y comentarios), comentarios diarios y preguntas rápidas
+// GET    /api/resultados[?simulada=1]  → encuesta (conteos y comentarios), comentarios diarios, preguntas rápidas
+//                                         y lecturas y reacciones por artículo
 // DELETE /api/resultados?simulada=1    → borra solo los datos simulados (pruebas del docente)
 // Solo para el docente: exige la cabecera "x-clave" igual a CLAVE_DOCENTE (variable de Vercel).
 const crypto = require("crypto");
-const { baseDeDatos, CLAVES_OPINION } = require("./_comun");
+const { baseDeDatos, CLAVES_OPINION, CLAVES_INTERACCIONES } = require("./_comun");
 
 function claveCorrecta(dada) {
   const real = process.env.CLAVE_DOCENTE || "";
@@ -28,7 +29,8 @@ module.exports = async (req, res) => {
 
     if (req.method === "DELETE") {
       if (!simulada) return res.status(400).json({ error: "Solo se pueden borrar los datos simulados." });
-      await db.del(CLAVES_OPINION.comentarios.simulada, CLAVES_OPINION.encuesta.simulada, CLAVES_OPINION.sondeo.simulada);
+      await db.del(CLAVES_OPINION.comentarios.simulada, CLAVES_OPINION.encuesta.simulada, CLAVES_OPINION.sondeo.simulada,
+                   CLAVES_INTERACCIONES.simulada);
       return res.status(200).json({ ok: true });
     }
     if (req.method !== "GET") {
@@ -36,11 +38,20 @@ module.exports = async (req, res) => {
       return res.status(405).json({ error: "Método no permitido." });
     }
 
-    const [com, enc, son] = await Promise.all([
+    const [com, enc, son, inter] = await Promise.all([
       db.lrange(CLAVES_OPINION.comentarios[tipo], 0, -1),
       db.lrange(CLAVES_OPINION.encuesta[tipo], 0, -1),
       db.lrange(CLAVES_OPINION.sondeo[tipo], 0, -1),
+      db.hgetall(CLAVES_INTERACCIONES[tipo]),
     ]);
+    // Lecturas y reacciones: { "AAAA-MM-DD": { lectura, "me-gusta", "no-me-gusta" } }
+    const interacciones = {};
+    for (const [campo, valor] of Object.entries(inter || {})) {
+      const [fecha, t] = campo.split(":");
+      if (!fecha || !t) continue;
+      interacciones[fecha] = interacciones[fecha] || { "lectura": 0, "me-gusta": 0, "no-me-gusta": 0 };
+      interacciones[fecha][t] = Math.max(0, Number(valor) || 0);
+    }
     // Preguntas rápidas: conteo por pregunta y respuesta.
     const sondeo = {};
     for (const v of (son || []).map(leer).filter(Boolean)) {
@@ -64,6 +75,7 @@ module.exports = async (req, res) => {
       encuesta: { total: respuestas.length, conteos, comentarios: comentariosEncuesta },
       comentarios,
       sondeo,
+      interacciones,
     });
   } catch (e) {
     return res.status(500).json({ error: e.message });
