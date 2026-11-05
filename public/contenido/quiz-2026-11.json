@@ -1,0 +1,226 @@
+{
+  "version": 1,
+  "mes": "2026-11",
+  "preguntas": {
+    "2026-11-09": {
+      "pregunta": "¿Qué combinación de diferenciales logra selectividad?",
+      "alternativas": [
+        "30 mA instantáneo sobre 30 mA instantáneo",
+        "300 mA tipo S sobre 30 mA instantáneo",
+        "30 mA instantáneo sobre 300 mA tipo S"
+      ],
+      "correcta": 1,
+      "explicacion": "El de aguas arriba debe ser menos sensible y más lento. Así, ante una fuga, opera primero el de 30 mA y el resto de la instalación sigue con energía."
+    },
+    "2026-11-10": {
+      "pregunta": "Un perno necesita 60 N·m para soltarse. Con una llave de 0,30 m, empujando perpendicular, ¿qué fuerza basta?",
+      "alternativas": [
+        "18 N",
+        "180 N",
+        "200 N"
+      ],
+      "correcta": 2,
+      "explicacion": "De M = F · d sale F = M / d = 60 / 0,30 = 200 N. A más brazo, menos fuerza."
+    },
+    "2026-11-11": {
+      "pregunta": "En el circuito de autoenclavamiento, ¿qué mantiene encendida la salida cuando sueltas el pulsador de marcha?",
+      "alternativas": [
+        "Un contacto de la propia salida, en paralelo con la marcha",
+        "El contacto de paro, conectado en paralelo",
+        "Una bobina Reset en el mismo peldaño"
+      ],
+      "correcta": 0,
+      "explicacion": "El contacto de la salida, en paralelo con la marcha, mantiene la continuidad del peldaño. El paro va en serie y es el que corta el camino."
+    },
+    "2026-11-12": {
+      "pregunta": "Un camino tiene t_{cq} = 0,2 ns, lógica de 0,5 ns, setup de 0,2 ns y skew de 0,1 ns. ¿Cuál es la frecuencia máxima del reloj?",
+      "alternativas": [
+        "500 MHz",
+        "1 GHz",
+        "2 GHz"
+      ],
+      "correcta": 1,
+      "explicacion": "La suma da 1,0 ns, así que T_{clk} ≥ 1 ns. Como f = 1 / T, la frecuencia máxima es 1 GHz."
+    },
+    "2026-11-13": {
+      "pregunta": "¿Qué dispositivo lee la dirección MAC y entrega cada trama solo al puerto donde está el destino?",
+      "alternativas": [
+        "Hub",
+        "Router",
+        "Switch"
+      ],
+      "correcta": 2,
+      "explicacion": "El switch trabaja en la capa 2 y usa su tabla de direcciones MAC. El hub repite todo a todos los puertos, y el router decide con la dirección IP."
+    },
+    "2026-11-14": {
+      "pregunta": "Producir 1 kg de hidrógeno cuesta unos 50 kWh, y ese kilo guarda 33,3 kWh. ¿Qué parte de la energía se recupera?",
+      "alternativas": [
+        "Cerca de dos tercios",
+        "Cerca de un tercio",
+        "Casi toda"
+      ],
+      "correcta": 0,
+      "explicacion": "33,3 / 50 ≈ 0,67: se recuperan unos dos tercios. El resto se pierde en la electrólisis."
+    },
+    "2026-11-15": {
+      "pregunta": "Antes de la activación, la suma de una neurona da −1. ¿Qué entrega la neurona si usa ReLU?",
+      "alternativas": [
+        "0",
+        "−1",
+        "1"
+      ],
+      "correcta": 0,
+      "explicacion": "ReLU(x) = max(0, x): deja pasar los positivos y cambia los negativos por 0."
+    },
+    "2026-11-16": {
+      "pregunta": "¿En qué esquema una primera falla a masa no corta el suministro?",
+      "alternativas": [
+        "TT",
+        "TN-S",
+        "IT"
+      ],
+      "correcta": 2,
+      "explicacion": "En IT la fuente está aislada o conectada con una impedancia alta, así que la primera falla deja una corriente muy pequeña y una tensión segura. Un medidor de aislamiento la avisa sin cortar."
+    },
+    "2026-11-17": {
+      "pregunta": "Para arrancar un bloque hacen falta 145 N, y para mantenerlo deslizando bastan 112 N. ¿Por qué cambia la fuerza?",
+      "alternativas": [
+        "Porque el peso del bloque baja al moverse",
+        "Porque la fuerza normal aumenta",
+        "Porque μ_{s} es mayor que μ_{k}"
+      ],
+      "correcta": 2,
+      "explicacion": "El roce estático máximo, μ_{s} · n, es mayor que el cinético, μ_{k} · n. Con el bloque en reposo hay que vencer el estático; una vez que desliza, solo actúa el cinético."
+    },
+    "2026-11-18": {
+      "pregunta": "Se corta la señal del PLC. ¿Qué hace una electroválvula biestable?",
+      "alternativas": [
+        "Vuelve a su posición de reposo por el resorte",
+        "Se queda en su última posición",
+        "Cambia a la posición contraria"
+      ],
+      "correcta": 1,
+      "explicacion": "La biestable no tiene resorte de retorno: se queda donde está hasta recibir un pulso en la otra bobina. La que vuelve sola al reposo es la monoestable."
+    },
+    "2026-11-19": {
+      "pregunta": "Un MOSFET con R_{DS(on)} = 20 mΩ conduce 10 A. ¿Cuánto cae entre drenaje y fuente?",
+      "alternativas": [
+        "0,2 V",
+        "2 V",
+        "0,02 V"
+      ],
+      "correcta": 0,
+      "explicacion": "V_{DS} = I_{D} · R_{DS(on)} = 10 · 0,020 = 0,2 V."
+    },
+    "2026-11-20": {
+      "pregunta": "Un arreglo de enteros de 4 bytes empieza en la dirección 2000. ¿En qué dirección está A[3]?",
+      "alternativas": [
+        "2012",
+        "2008",
+        "2003"
+      ],
+      "correcta": 1,
+      "explicacion": "Dir(A[3]) = 2000 + (3 − 1) · 4 = 2008. Antes de A[3] hay dos elementos de 4 bytes."
+    },
+    "2026-11-21": {
+      "pregunta": "Una medida de eficiencia ahorra cada año el doble de lo que costó. ¿En cuánto tiempo se recupera la inversión?",
+      "alternativas": [
+        "En 6 meses",
+        "En 1 año",
+        "En 2 años"
+      ],
+      "correcta": 0,
+      "explicacion": "Si el ahorro anual es el doble de la inversión, el período de recuperación es 1 / 2 = 0,5 años, es decir, 6 meses."
+    },
+    "2026-11-22": {
+      "pregunta": "Una red entrega puntajes para tres clases. ¿Qué garantiza la softmax?",
+      "alternativas": [
+        "Que el puntaje mayor se convierta en 1",
+        "Probabilidades positivas que suman 1",
+        "Que las tres clases queden con la misma probabilidad"
+      ],
+      "correcta": 1,
+      "explicacion": "La softmax aplica exp a cada puntaje, lo que los vuelve positivos, y divide por la suma de todos, así que el total es 1. La clase con mayor puntaje recibe la mayor probabilidad, pero no necesariamente 1."
+    },
+    "2026-11-23": {
+      "pregunta": "Un limitador de cabecera tiene U_{p} = 2.000 V y uno de proximidad, U_{p} = 1.200 V. Según la regla de Legrand, ¿cuánto cable debe haber entre ellos?",
+      "alternativas": [
+        "Al menos 0,8 m",
+        "Al menos 8 m",
+        "Al menos 80 m"
+      ],
+      "correcta": 1,
+      "explicacion": "d ≥ (2.000 − 1.200) / 100 = 8 m. Con menos cable, los dos limitadores no se reparten bien el impulso."
+    },
+    "2026-11-24": {
+      "pregunta": "Dos barras iguales, una de acero (200 GPa) y otra de aluminio (70 GPa), soportan la misma carga. ¿Cuál se alarga más?",
+      "alternativas": [
+        "La de aluminio",
+        "La de acero",
+        "Las dos se alargan lo mismo"
+      ],
+      "correcta": 0,
+      "explicacion": "Según δ = P · L / (E · A), con la misma carga, el mismo largo y la misma área, se alarga más la que tiene menor E. El aluminio, con 70 GPa, se alarga casi tres veces más que el acero."
+    },
+    "2026-11-25": {
+      "pregunta": "Un ventilador debe seguir funcionando 2 minutos después de que se apaga el horno. ¿Qué temporizador corresponde?",
+      "alternativas": [
+        "TON",
+        "TP",
+        "TOF"
+      ],
+      "correcta": 2,
+      "explicacion": "El TOF mantiene su salida activa durante el tiempo PT después de que la entrada se desactiva. Aquí la entrada es el horno encendido, y PT = 2 minutos."
+    },
+    "2026-11-26": {
+      "pregunta": "Si la tensión de alimentación baja de 1,0 V a 0,5 V, con todo lo demás igual, ¿qué pasa con la potencia dinámica?",
+      "alternativas": [
+        "Baja a la cuarta parte",
+        "Baja a la mitad",
+        "No cambia"
+      ],
+      "correcta": 0,
+      "explicacion": "La potencia depende de V_{DD}^{2}. Si la tensión baja a la mitad, la potencia queda en (0,5)^{2} = 0,25 de su valor."
+    },
+    "2026-11-27": {
+      "pregunta": "En el ejemplo de Abad, ¿qué tráfico bloquea el cortafuegos?",
+      "alternativas": [
+        "Las peticiones web desde Internet al servidor de la DMZ",
+        "Las conexiones que inicia la DMZ hacia la red interna",
+        "Las respuestas del servidor web hacia Internet"
+      ],
+      "correcta": 1,
+      "explicacion": "El cortafuegos deja entrar el tráfico web desde Internet a la DMZ, pero impide que la DMZ inicie conexiones hacia la red interna. Así, un servidor comprometido no sirve como puente hacia la empresa."
+    },
+    "2026-11-28": {
+      "pregunta": "Un BESS debe entregar 60 kWh útiles y se diseña con una profundidad de descarga de 75 %. ¿Cuánta capacidad hay que instalar?",
+      "alternativas": [
+        "45 kWh",
+        "135 kWh",
+        "80 kWh"
+      ],
+      "correcta": 2,
+      "explicacion": "Capacidad instalada = 60 / 0,75 = 80 kWh. Solo se usa el 75 % en cada ciclo, así que hay que instalar más de lo que se necesita."
+    },
+    "2026-11-29": {
+      "pregunta": "¿En qué orden recorre la red la retropropagación?",
+      "alternativas": [
+        "De la entrada a la salida",
+        "De la salida a la entrada",
+        "Capa por capa, en orden al azar"
+      ],
+      "correcta": 1,
+      "explicacion": "Parte del error en la salida y lo lleva hacia atrás, capa por capa, aplicando la regla de la cadena hasta llegar a la entrada."
+    },
+    "2026-11-30": {
+      "pregunta": "Un tablero domiciliario tiene 8 circuitos de alumbrado y enchufes. ¿Cuántos diferenciales necesita como mínimo?",
+      "alternativas": [
+        "3",
+        "2",
+        "8"
+      ],
+      "correcta": 0,
+      "explicacion": "Cada diferencial puede proteger como máximo 3 circuitos: 8 / 3 = 2,7, que se redondea hacia arriba a 3 diferenciales."
+    }
+  }
+}
