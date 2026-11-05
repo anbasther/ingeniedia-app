@@ -45,7 +45,7 @@ const hoyKey = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 };
-const APP_VERSION = "0.6.3";
+const APP_VERSION = "0.7.0";
 const CORREO_CONTACTO = "anbasther@gmail.com";
 
 // Aviso que acompaña a cada artículo. El texto completo está en /terminos.
@@ -1408,6 +1408,79 @@ function AvisoEtapa({ T, state, onAbrirEncuesta }) {
   );
 }
 
+// Mini quiz (v0.7.0): una pregunta al final del artículo de hoy, un intento por día.
+// Las preguntas viven en /contenido/quiz-AAAA-MM.json (los artículos no se tocan).
+// Solo se envía un conteo anónimo de respuestas correctas e incorrectas por artículo.
+const quizCache = {};
+function cargarQuiz(mes) {
+  if (!quizCache[mes]) quizCache[mes] = fetch(`/contenido/quiz-${mes}.json`, { cache:"no-cache" })
+    .then(r => r.ok ? r.json() : {}).then(j => j?.preguntas ?? {}).catch(() => ({}));
+  return quizCache[mes];
+}
+function preguntaValida(q) {
+  return q && typeof q.pregunta === "string" && Array.isArray(q.alternativas) && q.alternativas.length >= 2 &&
+    Number.isInteger(q.correcta) && q.correcta >= 0 && q.correcta < q.alternativas.length;
+}
+function MiniQuiz({ T, fecha, state, setState }) {
+  const hoy = hoyKey();
+  const [q, setQ] = useState(null);
+  useEffect(() => {
+    let vivo = true; setQ(null);
+    if (fecha === hoy) cargarQuiz(mesDe(fecha)).then(p => { if (vivo) setQ(preguntaValida(p[fecha]) ? p[fecha] : null); });
+    return () => { vivo = false; };
+  }, [fecha, hoy]);
+  if (fecha !== hoy || !q) return null;
+  const elegida = state.quizDia?.fecha === hoy ? state.quizDia.elegida : null;
+  const respondida = elegida !== null && elegida !== undefined;
+  const acierto = respondida && elegida === q.correcta;
+
+  function responder(i) {
+    if (respondida) return;
+    setState(s => ({ ...s, quizDia: { fecha: hoy, elegida: i } }));
+    enviarInteraccion(fecha, i === q.correcta ? "quiz-correcta" : "quiz-incorrecta");
+  }
+  const verde = "#16a34a", rojo = T.danger;
+  const estilo = i => {
+    const base = { width:"100%", textAlign:"left", padding:"10px 12px", borderRadius:12, fontFamily:FONT,
+      fontSize:12.5, lineHeight:1.45, display:"flex", alignItems:"center", gap:9, transition:"all .2s ease" };
+    if (!respondida) return { ...base, cursor:"pointer", background:T.card, color:T.text, border:`1px solid ${T.border}` };
+    if (i === q.correcta) return { ...base, cursor:"default", background:"rgba(22,163,74,0.12)", color:T.text, border:`1.5px solid ${verde}`, fontWeight:600 };
+    if (i === elegida)    return { ...base, cursor:"default", background:"rgba(220,38,38,0.10)", color:T.text, border:`1.5px solid ${rojo}` };
+    return { ...base, cursor:"default", background:T.card, color:T.muted, border:`1px solid ${T.border}`, opacity:.7 };
+  };
+  const marca = i => !respondida ? String.fromCharCode(65 + i)
+    : i === q.correcta ? "✓" : i === elegida ? "✕" : String.fromCharCode(65 + i);
+
+  return (
+    <div style={{ background:T.accentBg, border:`1px solid ${T.border}`, borderRadius:16, padding:"13px 13px 12px", marginBottom:14 }}>
+      <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:8 }}>
+        <span style={{ fontSize:16 }}>🧠</span>
+        <span style={{ fontSize:13, fontWeight:700, color:T.text }}>Mini quiz</span>
+        <span style={{ marginLeft:"auto", fontSize:10.5, color:T.muted }}>{respondida ? "Respondido hoy" : "Un intento"}</span>
+      </div>
+      <p style={{ ...TEXTO_LARGO, fontSize:12.5, color:T.text, lineHeight:1.6, margin:"0 0 10px" }}>{conIndices(q.pregunta)}</p>
+      <div role="group" aria-label="Alternativas" style={{ display:"flex", flexDirection:"column", gap:7 }}>
+        {q.alternativas.map((alt, i) => (
+          <button key={i} onClick={() => responder(i)} disabled={respondida} style={estilo(i)}>
+            <span style={{ width:22, height:22, borderRadius:7, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center",
+              fontSize:11, fontWeight:700, background: respondida && i === q.correcta ? verde : respondida && i === elegida ? rojo : T.pill,
+              color: respondida && (i === q.correcta || i === elegida) ? "#fff" : T.accent }}>{marca(i)}</span>
+            <span>{conIndices(alt)}</span>
+          </button>
+        ))}
+      </div>
+      {respondida && (
+        <div role="status" style={{ marginTop:10, padding:"10px 12px", borderRadius:12, background:T.card, border:`1px solid ${T.border}` }}>
+          <p style={{ fontSize:12.5, fontWeight:700, margin:"0 0 4px", color: acierto ? verde : rojo }}>
+            {acierto ? "✅ ¡Correcto!" : "❌ No era esa"}
+          </p>
+          {q.explicacion && <p style={{ ...TEXTO_LARGO, fontSize:12, color:T.sub, lineHeight:1.6, margin:0 }}>{conIndices(q.explicacion)}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Al final del artículo del día. Anónimo, uno por día (lo controla el teléfono).
 function Comentarios({ T, art, fecha, state, setState }) {
   const hoy = hoyKey();
@@ -1703,6 +1776,7 @@ function TodayView({ state, setState, T, showToast, scrollRef, articulos }) {
           {art.ai          && <SectionBlock icon={<Ic.Cpu/>}    title="Aplicación con IA" T={T}>{art.ai}</SectionBlock>}
           {art.history     && <SectionBlock icon={<Ic.ClockH/>} title="Historia técnica"  T={T}>{art.history}</SectionBlock>}
           {art.keyConcepts && <SectionBlock icon={<Ic.Star/>}   title="Conceptos clave"   T={T}>{art.keyConcepts}</SectionBlock>}
+          <MiniQuiz T={T} fecha={key} state={state} setState={setState}/>
           <div style={{ background:T.pill, border:`1px solid ${T.border}`, borderRadius:14, padding:"11px 13px", marginBottom:12 }}>
             <p style={{ fontSize:12, fontWeight:700, color:T.text, marginBottom:8 }}>Fuentes</p>
             {art.sources.map(src => (
