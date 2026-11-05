@@ -44,12 +44,12 @@ module.exports = async (req, res) => {
       db.lrange(CLAVES_OPINION.sondeo[tipo], 0, -1),
       db.hgetall(CLAVES_INTERACCIONES[tipo]),
     ]);
-    // Lecturas y reacciones: { "AAAA-MM-DD": { lectura, "me-gusta", "no-me-gusta" } }
+    // Lecturas, reacciones y mini quiz: { "AAAA-MM-DD": { lectura, "me-gusta", "no-me-gusta", "quiz-correcta", "quiz-incorrecta" } }
     const interacciones = {};
     for (const [campo, valor] of Object.entries(inter || {})) {
       const [fecha, t] = campo.split(":");
       if (!fecha || !t) continue;
-      interacciones[fecha] = interacciones[fecha] || { "lectura": 0, "me-gusta": 0, "no-me-gusta": 0 };
+      interacciones[fecha] = interacciones[fecha] || { "lectura": 0, "me-gusta": 0, "no-me-gusta": 0, "quiz-correcta": 0, "quiz-incorrecta": 0 };
       interacciones[fecha][t] = Math.max(0, Number(valor) || 0);
     }
     // Preguntas rápidas: conteo por pregunta y respuesta.
