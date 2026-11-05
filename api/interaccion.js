@@ -15,7 +15,7 @@ module.exports = async (req, res) => {
     const b = cuerpo(req);
     if (!FECHA_VALIDA.test(b.fecha || "")) return res.status(400).json({ error: "Fecha inválida." });
     if (!TIPOS_INTERACCION.includes(b.tipo)) return res.status(400).json({ error: "Tipo inválido." });
-    const delta = b.tipo === "lectura" ? 1 : (Number(b.delta) === -1 ? -1 : 1);
+    const delta = (b.tipo === "lectura" || b.tipo.startsWith("quiz-")) ? 1 : (Number(b.delta) === -1 ? -1 : 1);
     const clave = CLAVES_INTERACCIONES[b.simulada === true ? "simulada" : "real"];
     const campo = `${b.fecha}:${b.tipo}`;
     const db = baseDeDatos();
