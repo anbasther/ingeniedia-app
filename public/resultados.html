@@ -98,7 +98,7 @@
     </section>
 
     <section class="tarjeta">
-      <h2>Lecturas y reacciones por artículo</h2>
+      <h2>Lecturas, reacciones y mini quiz por artículo</h2>
       <p class="cifra" id="cifra-inter"></p>
       <div class="tabla"><table class="inter" id="tabla-inter"></table></div>
     </section>
@@ -181,19 +181,22 @@
     const fechasI = Object.keys(inter).sort((a, b) => b.localeCompare(a));
     const sum = t => fechasI.reduce((n, f) => n + (inter[f][t] || 0), 0);
     $("cifra-inter").textContent = fechasI.length
-      ? `${sum("lectura")} lecturas completas · ${sum("me-gusta")} 👍 · ${sum("no-me-gusta")} 👎 · ${fechasI.length} artículos.`
+      ? `${sum("lectura")} lecturas completas · ${sum("me-gusta")} 👍 · ${sum("no-me-gusta")} 👎 · mini quiz: ${sum("quiz-correcta")} ✅ / ${sum("quiz-incorrecta")} ❌ · ${fechasI.length} artículos.`
       : "Aún no hay lecturas ni reacciones registradas.";
     const ti = $("tabla-inter"); ti.replaceChildren();
     if (fechasI.length) {
       ti.append(el("thead", {}, el("tr", {}, el("th", { textContent:"Artículo" }),
-        el("th", { textContent:"Leído" }), el("th", { textContent:"👍" }), el("th", { textContent:"👎" }))));
+        el("th", { textContent:"Leído" }), el("th", { textContent:"👍" }), el("th", { textContent:"👎" }),
+        el("th", { textContent:"Quiz ✅" }), el("th", { textContent:"Quiz ❌" }), el("th", { textContent:"Acierto" }))));
       const cu = el("tbody");
       fechasI.forEach(f => {
         const a = titulos[f] || {}, v = inter[f];
         cu.append(el("tr", {},
           el("td", {}, a.title || "(sin título)", el("span", { className:"area", textContent:`${fechaBonita(f)}${a.shortCategory ? " · " + a.shortCategory : ""}` })),
           el("td", { textContent: v["lectura"] || 0 }), el("td", { textContent: v["me-gusta"] || 0 }),
-          el("td", { textContent: v["no-me-gusta"] || 0 })));
+          el("td", { textContent: v["no-me-gusta"] || 0 }),
+          el("td", { textContent: v["quiz-correcta"] || 0 }), el("td", { textContent: v["quiz-incorrecta"] || 0 }),
+          el("td", { textContent: ((v["quiz-correcta"]||0) + (v["quiz-incorrecta"]||0)) ? Math.round((v["quiz-correcta"]||0) / ((v["quiz-correcta"]||0) + (v["quiz-incorrecta"]||0)) * 100) + " %" : "—" })));
       });
       ti.append(cu);
     }
