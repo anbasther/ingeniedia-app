@@ -26,6 +26,7 @@ const CLAVES_OPINION = {
   comentarios: { real: "ingeniedia:comentarios", simulada: "ingeniedia:comentarios-simulados" },
   encuesta:    { real: "ingeniedia:encuesta",    simulada: "ingeniedia:encuesta-simulada" },
   sondeo:      { real: "ingeniedia:sondeo",      simulada: "ingeniedia:sondeo-simulado" },
+  piloto:      { real: "ingeniedia:encuesta-piloto", simulada: "ingeniedia:encuesta-piloto-simulada" }, // v0.7.1
 };
 const MAX_REGISTROS = 5000; // tope de seguridad por lista
 

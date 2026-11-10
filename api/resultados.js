@@ -1,4 +1,4 @@
-// GET    /api/resultados[?simulada=1]  → encuesta (conteos y comentarios), comentarios diarios, preguntas rápidas
+// GET    /api/resultados[?simulada=1]  → encuesta de cierre y del piloto (conteos y comentarios), comentarios diarios, preguntas rápidas
 //                                         y lecturas y reacciones por artículo
 // DELETE /api/resultados?simulada=1    → borra solo los datos simulados (pruebas del docente)
 // Solo para el docente: exige la cabecera "x-clave" igual a CLAVE_DOCENTE (variable de Vercel).
@@ -30,7 +30,7 @@ module.exports = async (req, res) => {
     if (req.method === "DELETE") {
       if (!simulada) return res.status(400).json({ error: "Solo se pueden borrar los datos simulados." });
       await db.del(CLAVES_OPINION.comentarios.simulada, CLAVES_OPINION.encuesta.simulada, CLAVES_OPINION.sondeo.simulada,
-                   CLAVES_INTERACCIONES.simulada);
+                   CLAVES_OPINION.piloto.simulada, CLAVES_INTERACCIONES.simulada);
       return res.status(200).json({ ok: true });
     }
     if (req.method !== "GET") {
@@ -38,11 +38,12 @@ module.exports = async (req, res) => {
       return res.status(405).json({ error: "Método no permitido." });
     }
 
-    const [com, enc, son, inter] = await Promise.all([
+    const [com, enc, son, inter, pil] = await Promise.all([
       db.lrange(CLAVES_OPINION.comentarios[tipo], 0, -1),
       db.lrange(CLAVES_OPINION.encuesta[tipo], 0, -1),
       db.lrange(CLAVES_OPINION.sondeo[tipo], 0, -1),
       db.hgetall(CLAVES_INTERACCIONES[tipo]),
+      db.lrange(CLAVES_OPINION.piloto[tipo], 0, -1),
     ]);
     // Lecturas, reacciones y mini quiz: { "AAAA-MM-DD": { lectura, "me-gusta", "no-me-gusta", "quiz-correcta", "quiz-incorrecta" } }
     const interacciones = {};
@@ -70,8 +71,21 @@ module.exports = async (req, res) => {
     const comentariosEncuesta = respuestas.filter(r => r.comentario)
       .map(r => ({ fecha: r.fecha, texto: r.comentario })).reverse();
 
+    // Encuesta del piloto (v0.7.1): conteo por pregunta y opción; «areas» admite varias.
+    const pilotoResp = (pil || []).map(leer).filter(Boolean);
+    const pilotoConteos = {};
+    for (const r of pilotoResp)
+      for (const [pregunta, valor] of Object.entries(r.respuestas || {})) {
+        pilotoConteos[pregunta] = pilotoConteos[pregunta] || {};
+        for (const v of (Array.isArray(valor) ? valor : [valor]))
+          pilotoConteos[pregunta][v] = (pilotoConteos[pregunta][v] || 0) + 1;
+      }
+    const comentariosPiloto = pilotoResp.filter(r => r.comentario)
+      .map(r => ({ fecha: r.fecha, texto: r.comentario })).reverse();
+
     return res.status(200).json({
       simulada,
+      piloto: { total: pilotoResp.length, conteos: pilotoConteos, comentarios: comentariosPiloto },
       encuesta: { total: respuestas.length, conteos, comentarios: comentariosEncuesta },
       comentarios,
       sondeo,
