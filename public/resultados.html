@@ -110,6 +110,14 @@
     </section>
 
     <section class="tarjeta">
+      <h2>Encuesta del piloto</h2>
+      <p class="cifra" id="cifra-pil"></p>
+      <div class="tabla"><table id="tabla-pil"></table></div>
+      <h2 style="margin-top:18px; font-size:15px">Comentarios de la encuesta del piloto</h2>
+      <ul class="lista" id="lista-pil"></ul>
+    </section>
+
+    <section class="tarjeta">
       <h2>Encuesta de cierre</h2>
       <p class="cifra" id="cifra-enc"></p>
       <div class="tabla"><table id="tabla-enc"></table></div>
@@ -124,6 +132,26 @@
   const ASPECTOS = [["diseno","Diseño"],["contenido","Contenido"],["claridad","Claridad"],
                     ["fluidez","Fluidez"],["facilidad","Facilidad de uso"],["aviso","Aviso diario"]];
   const NIVELES = [["muy-malo","Muy malo"],["malo","Malo"],["bueno","Bueno"],["muy-bueno","Muy bueno"],["no-lo-use","No lo usé"]];
+  // Encuesta del piloto (v0.7.1): mismas claves que BLOQUES_PILOTO en src/App.jsx.
+  const ACU = [["muy-desacuerdo","Muy en desacuerdo"],["desacuerdo","En desacuerdo"],["acuerdo","De acuerdo"],["muy-acuerdo","Muy de acuerdo"]];
+  const UTI = [["nada","Nada útil"],["poco","Poco útil"],["util","Útil"],["muy","Muy útil"],["no-lo-use","No lo usé"]];
+  const IDE = [["si","Sí, lo usaría"],["tal-vez","Tal vez"],["no","No"]];
+  const PILOTO = [
+    ["dias","1. Días a la semana que leyó",[["1-2","1 o 2"],["3-4","3 o 4"],["5-6","5 o 6"],["todos","Todos"]]],
+    ["momento","2. Cuándo lo lee",[["manana","Mañana"],["mediodia","Mediodía"],["tarde","Tarde"],["noche","Noche"]]],
+    ["aprendi","3. Aprendí algo nuevo",ACU],
+    ["asignaturas","4. Se relaciona con mis asignaturas",ACU],
+    ["formulas","5. Fórmulas y símbolos claros",ACU],
+    ["nivel","6. Nivel técnico",[["basico","Muy básico"],["adecuado","Adecuado"],["avanzado","Muy avanzado"]]],
+    ["areas","7. Áreas que más interesan (varias)",[["electricidad","Electricidad"],["mecanica","Mecánica"],["automatizacion","Automatización"],["electronica","Electrónica"],["informatica","Informática"],["energia","Energía"],["ia","IA"]]],
+    ["aviso","8. Aviso de mediodía",UTI],
+    ["racha","9. Recordatorio de racha",UTI],
+    ["archivo","10. Archivo y buscador",UTI],
+    ["quiz","11. Mini quiz",UTI],
+    ["ligas","12. Ligas de rachas",IDE],
+    ["recuperar","13. Recuperar un día de racha",IDE],
+    ["recomendar","14. Recomendaría IngenieDía",[["si","Sí"],["tal-vez","Tal vez"],["no","No"]]],
+  ];
   const $ = id => document.getElementById(id);
   let clave = "";
   try { clave = sessionStorage.getItem("ingeniedia-clave") || ""; } catch {}
@@ -211,6 +239,29 @@
     });
     ls.append(el("li", {}, el("p", { className:"meta", textContent: totalQ === 1 ? "1 respuesta." : `${totalQ} respuestas.` })));
 
+    // Encuesta del piloto: una fila por pregunta, con cada opción y su conteo.
+    const pil = j.piloto || { total:0, conteos:{}, comentarios:[] };
+    $("cifra-pil").textContent = (pil.total === 1 ? "1 respuesta." : `${pil.total} respuestas.`) + " En la pregunta 7 se pueden marcar varias áreas.";
+    const tp = $("tabla-pil"); tp.replaceChildren();
+    tp.append(el("thead", {}, el("tr", {}, el("th", { textContent:"Pregunta" }), el("th", { textContent:"Respuestas" }))));
+    const cp = el("tbody");
+    PILOTO.forEach(([k, nombre, ops]) => {
+      const c = pil.conteos[k] || {};
+      const celda = el("td", { className:"n" });
+      ops.forEach(([ok, on]) => {
+        const v = c[ok] || 0, pct = pil.total ? Math.round(v / pil.total * 100) : 0;
+        const barra = el("span", { className:"b" }, el("i")); barra.firstChild.style.width = pct + "%";
+        celda.append(el("div", { textContent: `${on}: ${v}${pil.total ? ` (${pct} %)` : ""}` }, barra));
+      });
+      cp.append(el("tr", {}, el("td", { textContent:nombre }), celda));
+    });
+    tp.append(cp);
+    const lp = $("lista-pil"); lp.replaceChildren();
+    if (!pil.comentarios.length) lp.append(el("li", {}, el("p", { className:"vacio", textContent:"Sin comentarios en la encuesta del piloto." })));
+    pil.comentarios.forEach(c => lp.append(el("li", {},
+      el("p", { className:"meta", textContent:fechaBonita(c.fecha) }),
+      el("p", { className:"texto", textContent:c.texto }))));
+
     // Encuesta
     const enc = j.encuesta || { total:0, conteos:{}, comentarios:[] };
     $("cifra-enc").textContent = enc.total === 1 ? "1 respuesta." : `${enc.total} respuestas.`;
@@ -246,6 +297,7 @@
     const filas = [["tipo","fecha","articulo","titulo","texto"]];
     (ultimo.comentarios || []).forEach(c => filas.push(["comentario", c.fecha, c.articulo, c.titulo, c.texto]));
     (ultimo.encuesta?.comentarios || []).forEach(c => filas.push(["comentario-encuesta", c.fecha, "", "", c.texto]));
+    (ultimo.piloto?.comentarios || []).forEach(c => filas.push(["comentario-piloto", c.fecha, "", "", c.texto]));
     const texto = "﻿" + filas.map(f => f.map(q).join(";")).join("\r\n");
     const a = el("a", { href: URL.createObjectURL(new Blob([texto], { type:"text/csv;charset=utf-8" })),
       download: `ingeniedia-comentarios${ultimo.simulada ? "-prueba" : ""}.csv` });

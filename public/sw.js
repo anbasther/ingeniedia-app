@@ -3,7 +3,7 @@
 // abren desde lo guardado en el teléfono, sin esperar a internet, y se
 // actualizan por detrás para la próxima vez. Los artículos (/contenido) y los
 // datos (/api) siempre van primero a la red. Al cambiar la app, subir VERSION.
-const VERSION = "v11";
+const VERSION = "v12";
 const CACHE = `ingeniedia-${VERSION}`;
 const BASE = ["/", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/badge-96.png",
               "/fonts/ibm-plex-sans-500.woff2", "/fonts/ibm-plex-sans-700.woff2"];
