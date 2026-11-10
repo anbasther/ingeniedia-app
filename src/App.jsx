@@ -45,7 +45,7 @@ const hoyKey = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 };
-const APP_VERSION = "0.7.0";
+const APP_VERSION = "0.7.1";
 const CORREO_CONTACTO = "anbasther@gmail.com";
 
 // Aviso que acompaña a cada artículo. El texto completo está en /terminos.
@@ -738,10 +738,11 @@ function useToast() {
   const [msg, setMsg]   = useState("");
   const [vis, setVis]   = useState(false);
   const timer           = useRef(null);
-  const show = useCallback((m) => {
+  // v0.7.1: la duración se puede alargar para mensajes importantes (p. ej., la racha).
+  const show = useCallback((m, ms = 2200) => {
     setMsg(m); setVis(true);
     clearTimeout(timer.current);
-    timer.current = setTimeout(() => setVis(false), 2200);
+    timer.current = setTimeout(() => setVis(false), ms);
   }, []);
   return { msg, vis, show };
 }
@@ -815,7 +816,45 @@ function Card({ T, title, icon, children, style:ex }) {
   );
 }
 
-function SectionBlock({ icon, title, children, T }) {
+// Figuras (v0.7.1): dibujo SVG opcional dentro de «En detalle».
+// En el JSON: figura: { svg, leyenda, despuesDe } — se inserta después del texto
+// «despuesDe» (o al final si no se encuentra). Líneas y textos usan currentColor,
+// así que el dibujo toma el color del texto en tema claro y oscuro.
+function figuraValida(f) {
+  return f && typeof f.svg === "string" && f.svg.trim().startsWith("<svg")
+    && !/<script|\son\w+\s*=|javascript:|<foreignObject/i.test(f.svg);
+}
+function Figura({ T, figura }) {
+  const svg = figura.svg.replace("<svg ", '<svg width="100%" style="display:block;height:auto" role="img" ');
+  return (
+    <figure style={{ margin:"14px 0", padding:"12px 10px 10px", borderRadius:14,
+      border:`1px solid ${T.border}`, background:T.bg, color:T.text }}>
+      <div aria-label={figura.leyenda || "Figura"} dangerouslySetInnerHTML={{ __html: svg }}/>
+      {figura.leyenda && (
+        <figcaption style={{ fontSize:11.5, color:T.sub, lineHeight:1.55, margin:"8px 2px 0" }}>
+          {conIndices(figura.leyenda)}
+        </figcaption>
+      )}
+    </figure>
+  );
+}
+function TextoConFigura({ T, texto, figura, estilo }) {
+  if (!figuraValida(figura)) return <p style={estilo}>{conIndices(texto)}</p>;
+  const ancla = typeof figura.despuesDe === "string" ? figura.despuesDe : "";
+  const i = ancla ? texto.indexOf(ancla) : -1;
+  const corte = i >= 0 ? i + ancla.length : texto.length;
+  const antes = texto.slice(0, corte).replace(/\s+$/, "");
+  const despues = texto.slice(corte).replace(/^\s+/, "");
+  return (
+    <>
+      <p style={estilo}>{conIndices(antes)}</p>
+      <Figura T={T} figura={figura}/>
+      {despues && <p style={estilo}>{conIndices(despues)}</p>}
+    </>
+  );
+}
+
+function SectionBlock({ icon, title, children, T, figura }) {
   return (
     <div style={{ borderBottom:`1px solid ${T.border}`, paddingBottom:14, marginBottom:14 }}>
       <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:7 }}>
@@ -825,7 +864,8 @@ function SectionBlock({ icon, title, children, T }) {
         </span>
         <span style={{ fontSize:13, fontWeight:600, color:T.text }}>{title}</span>
       </div>
-      <p style={{ ...TEXTO_LARGO, fontSize:12, color:T.sub, lineHeight:1.7, margin:0 }}>{conIndices(children)}</p>
+      <TextoConFigura T={T} texto={children} figura={figura}
+        estilo={{ ...TEXTO_LARGO, fontSize:12, color:T.sub, lineHeight:1.7, margin:0 }}/>
     </div>
   );
 }
@@ -1162,7 +1202,8 @@ function ReadMode({ art, onClose, onFin, T }) {
           <div key={label} style={{ marginBottom:20 }}>
             <p style={{ fontSize:11, fontWeight:700, color:T.accent, letterSpacing:1,
               marginBottom:6, textTransform:"uppercase" }}>{label}</p>
-            <p style={{ ...TEXTO_LARGO, fontSize:14, color:T.sub, lineHeight:1.75, margin:0 }}>{conIndices(text)}</p>
+            <TextoConFigura T={T} texto={text} figura={label === "En detalle" ? art.figura : null}
+              estilo={{ ...TEXTO_LARGO, fontSize:14, color:T.sub, lineHeight:1.75, margin:0 }}/>
           </div>
         ))}
         <div style={{ marginTop:24, paddingTop:16, borderTop:`1px solid ${T.border}` }}>
@@ -1186,7 +1227,10 @@ const PRUEBA = {
   encuesta:     "2026-10-19",  // encuesta de cierre desde este día
   encuestaHasta:"2026-10-31",  // último día de la encuesta
   cierreHasta:  "2026-11-30",  // último día de la tarjeta de la prueba extendida (seguir inscrito, invitar)
+  piloto:       "2026-11-23",  // encuesta del piloto desde este día (v0.7.1)
+  pilotoHasta:  "2026-11-29",  // último día de la encuesta del piloto
 };
+const enPiloto = hoy => hoy >= PRUEBA.piloto && hoy <= PRUEBA.pilotoHasta;
 // Los comentarios siguen abiertos después de la prueba (piloto de noviembre).
 const COMENTARIOS_DESDE = PRUEBA.inicio;
 const MAX_COMENTARIO = 500;
@@ -1214,6 +1258,40 @@ const NIVELES_ENCUESTA = [
   { key:"bueno",     label:"Bueno" },
   { key:"muy-bueno", label:"Muy bueno" },
 ];
+
+// Encuesta del piloto (aprobada 29 oct; pregunta 11 ajustada 6 nov). 15 preguntas, ~2 min.
+// Las claves deben coincidir con api/encuesta.js y public/resultados.html.
+const ACUERDO = [["muy-desacuerdo","Muy en desacuerdo"],["desacuerdo","En desacuerdo"],["acuerdo","De acuerdo"],["muy-acuerdo","Muy de acuerdo"]];
+const UTILIDAD = [["nada","Nada útil"],["poco","Poco útil"],["util","Útil"],["muy","Muy útil"],["no-lo-use","No lo usé"]];
+const IDEA = [["si","Sí, lo usaría"],["tal-vez","Tal vez"],["no","No"]];
+const BLOQUES_PILOTO = [
+  { titulo:"A. Uso", preguntas:[
+    { key:"dias",    texto:"¿Cuántos días a la semana leíste el artículo?", ops:[["1-2","1 o 2"],["3-4","3 o 4"],["5-6","5 o 6"],["todos","Todos"]] },
+    { key:"momento", texto:"¿Cuándo sueles leerlo?", ops:[["manana","Mañana"],["mediodia","Mediodía"],["tarde","Tarde"],["noche","Noche"]] },
+  ]},
+  { titulo:"B. Aprendizaje", preguntas:[
+    { key:"aprendi",     texto:"Aprendí algo nuevo con los artículos.", ops:ACUERDO },
+    { key:"asignaturas", texto:"Los artículos se relacionan con lo que veo en mis asignaturas.", ops:ACUERDO },
+    { key:"formulas",    texto:"Las fórmulas y los símbolos se explican con claridad.", ops:ACUERDO },
+    { key:"nivel",       texto:"El nivel técnico es…", ops:[["basico","Muy básico"],["adecuado","Adecuado"],["avanzado","Muy avanzado"]] },
+    { key:"areas",       texto:"¿Qué áreas te interesan más? (puedes marcar varias)", multi:true,
+      ops:[["electricidad","Electricidad"],["mecanica","Mecánica"],["automatizacion","Automatización"],["electronica","Electrónica"],["informatica","Informática"],["energia","Energía"],["ia","IA"]] },
+  ]},
+  { titulo:"C. Funciones", preguntas:[
+    { key:"aviso",   texto:"Aviso del artículo a mediodía.", ops:UTILIDAD },
+    { key:"racha",   texto:"Recordatorio de racha a las 20:00.", ops:UTILIDAD },
+    { key:"archivo", texto:"Archivo y buscador.", ops:UTILIDAD },
+    { key:"quiz",    texto:"Mini quiz del artículo del día.", ops:UTILIDAD },
+  ]},
+  { titulo:"D. Ideas para después del lanzamiento", preguntas:[
+    { key:"ligas",     texto:"Ligas de rachas para competir con compañeros de tu curso o carrera.", ops:IDEA },
+    { key:"recuperar", texto:"Recuperar un día de racha perdido, por ejemplo una vez por semana.", ops:IDEA },
+  ]},
+  { titulo:"E. Cierre", preguntas:[
+    { key:"recomendar", texto:"¿Recomendarías IngenieDía a un compañero?", ops:[["si","Sí"],["tal-vez","Tal vez"],["no","No"]] },
+  ]},
+];
+const PREGUNTAS_PILOTO = BLOQUES_PILOTO.flatMap(b => b.preguntas);
 
 async function enviarOpinion(ruta, datos) {
   const r = await fetch(ruta, {
@@ -1360,7 +1438,7 @@ function TarjetaSondeo({ T, state, setState }) {
   );
 }
 
-function AvisoEtapa({ T, state, onAbrirEncuesta }) {
+function AvisoEtapa({ T, state, onAbrirEncuesta, onAbrirPiloto }) {
   const [guia, setGuia] = useState(false);
   const hoy  = hoyKey();
   const fase = faseDe(hoy);
@@ -1395,8 +1473,22 @@ function AvisoEtapa({ T, state, onAbrirEncuesta }) {
       <QueProbar T={T} abierto={guia}/>
     </TarjetaPrueba>
   );
+  if (enPiloto(hoy) && !state.pilotoEnviada) return (
+    <TarjetaPrueba T={T} titulo="¿Cómo te fue en el piloto?" icono="📝">
+      <p style={p}>Cuéntanos tu experiencia con IngenieDía en una encuesta anónima de unos 2 minutos. Está abierta hasta el 29 de noviembre.</p>
+      {seguirInscrito}
+      <div style={botones}>
+        <PressBtn onClick={onAbrirPiloto}
+          style={{ background:T.accent, color:"#fff", border:"none", borderRadius:12, padding:"9px 14px",
+            fontFamily:FONT, fontSize:12.5, fontWeight:700, cursor:"pointer" }}>
+          Responder la encuesta
+        </PressBtn>
+        <BotonInvitar T={T}/>
+      </div>
+    </TarjetaPrueba>
+  );
   return (
-    <TarjetaPrueba T={T} titulo={state.encuestaEnviada ? "¡Gracias por responder la encuesta!" : "¡Gracias por seguir probando!"} icono="🙌">
+    <TarjetaPrueba T={T} titulo={state.pilotoEnviada || state.encuestaEnviada ? "¡Gracias por responder la encuesta!" : "¡Gracias por seguir probando!"} icono="🙌">
       <p style={p}>Seguimos probando unos días más. Sigue leyendo cada día y, si conoces a alguien a quien le pueda servir, invítalo a probar IngenieDía.</p>
       {seguirInscrito}
       <div style={botones}>
@@ -1615,6 +1707,97 @@ function EncuestaCierre({ T, onCerrar, onEnviada }) {
   );
 }
 
+// Encuesta del piloto (v0.7.1): del 23 al 29 de noviembre, anónima, ~2 minutos.
+function EncuestaPiloto({ T, onCerrar, onEnviada }) {
+  const [resp, setResp]         = useState({});
+  const [comentario, setComentario] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError]       = useState("");
+  const respondida = q => q.multi ? (resp[q.key] || []).length > 0 : !!resp[q.key];
+  const faltan = PREGUNTAS_PILOTO.filter(q => !respondida(q)).length;
+
+  async function enviar() {
+    if (faltan || enviando) return;
+    setEnviando(true); setError("");
+    try {
+      await enviarOpinion("/api/encuesta", { tipo:"piloto", respuestas:resp, comentario:comentario.trim() });
+      onEnviada();
+    } catch (e) { setError(e.message); setEnviando(false); }
+  }
+
+  const elegir = (q, k) => setResp(r => {
+    if (!q.multi) return { ...r, [q.key]:k };
+    const act = r[q.key] || [];
+    return { ...r, [q.key]: act.includes(k) ? act.filter(x => x !== k) : [...act, k] };
+  });
+
+  const boton = (q, k, label) => {
+    const sel = q.multi ? (resp[q.key] || []).includes(k) : resp[q.key] === k;
+    return (
+      <button key={k} onClick={() => elegir(q, k)} aria-pressed={sel}
+        style={{ flex: q.ops.length > 4 || q.multi ? "0 0 auto" : "1 1 0", minWidth:0, padding:"7px 9px", borderRadius:10, cursor:"pointer",
+          fontFamily:FONT, fontSize:10.5, fontWeight: sel ? 700 : 500, lineHeight:1.2,
+          border:`1px solid ${sel ? T.accent : T.border}`, background: sel ? T.accentBg : T.card,
+          color: sel ? T.accent : T.sub }}>
+        {label}
+      </button>
+    );
+  };
+
+  let n = 0;
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Encuesta del piloto"
+      style={{ position:"absolute", inset:0, zIndex:60, background:"rgba(2,6,23,0.55)",
+        display:"flex", alignItems:"flex-end" }}>
+      <div style={{ width:"100%", maxHeight:"92%", overflowY:"auto", background:T.bg,
+        borderRadius:"22px 22px 0 0", padding:"16px 16px 20px", boxSizing:"border-box", fontFamily:FONT }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10, marginBottom:4 }}>
+          <p style={{ fontSize:16, fontWeight:700, color:T.text, margin:0 }}>¿Cómo te fue en el piloto?</p>
+          <button onClick={onCerrar} aria-label="Cerrar"
+            style={{ background:T.pill, border:`1px solid ${T.border}`, borderRadius:10, width:30, height:30,
+              color:T.sub, cursor:"pointer", fontSize:16, lineHeight:1, flexShrink:0 }}>✕</button>
+        </div>
+        <p style={{ fontSize:11.5, color:T.muted, margin:"0 0 12px" }}>Anónima · unos 2 minutos</p>
+
+        {BLOQUES_PILOTO.map(b => (
+          <div key={b.titulo} style={{ marginBottom:6 }}>
+            <p style={{ fontSize:11, fontWeight:700, color:T.accent, letterSpacing:.6, textTransform:"uppercase", margin:"6px 0 8px" }}>{b.titulo}</p>
+            {b.titulo.startsWith("C.") && <p style={{ fontSize:11, color:T.muted, margin:"-4px 0 8px" }}>¿Qué tan útil te resultó cada función?</p>}
+            {b.titulo.startsWith("D.") && <p style={{ fontSize:11, color:T.muted, margin:"-4px 0 8px" }}>¿Usarías estas funciones si las agregamos?</p>}
+            {b.preguntas.map(q => { n += 1; return (
+              <div key={q.key} style={{ marginBottom:12 }}>
+                <p style={{ fontSize:12.5, color:T.text, fontWeight:600, margin:"0 0 6px" }}>{n}. {q.texto}</p>
+                <div style={{ display:"flex", flexWrap: q.ops.length > 4 || q.multi ? "wrap" : "nowrap", gap:5 }}>
+                  {q.ops.map(([k, label]) => boton(q, k, label))}
+                </div>
+              </div>
+            ); })}
+          </div>
+        ))}
+
+        <label htmlFor="piloto-comentario" style={{ display:"block", fontSize:12.5, color:T.text, fontWeight:600, margin:"4px 0 6px" }}>
+          {n + 1}. ¿Qué cambiarías o agregarías? <span style={{ fontWeight:400, color:T.muted }}>(opcional)</span>
+        </label>
+        <textarea id="piloto-comentario" value={comentario} maxLength={MAX_COMENTARIO_ENCUESTA} rows={3}
+          onChange={e => setComentario(e.target.value)}
+          style={{ width:"100%", boxSizing:"border-box", resize:"vertical", background:T.inputBg, color:T.text,
+            border:`1px solid ${T.border}`, borderRadius:12, padding:"9px 11px", fontFamily:FONT, fontSize:13, outline:"none" }}/>
+        <p style={{ fontSize:10.5, color:T.muted, textAlign:"right", margin:"4px 0 10px" }}>
+          {comentario.length}/{MAX_COMENTARIO_ENCUESTA}
+        </p>
+
+        {error && <p role="alert" style={{ fontSize:11.5, color:T.danger, margin:"0 0 8px" }}>{error}</p>}
+        <PressBtn onClick={enviar} disabled={!!faltan || enviando}
+          style={{ width:"100%", background: !faltan ? T.accent : T.pill, color: !faltan ? "#fff" : T.muted,
+            border:"none", borderRadius:12, padding:"11px 14px", fontFamily:FONT, fontSize:13.5, fontWeight:700,
+            cursor: !faltan ? "pointer" : "default" }}>
+          {enviando ? "Enviando…" : !faltan ? "Enviar respuestas" : `Faltan ${faltan} ${faltan === 1 ? "pregunta" : "preguntas"} por responder`}
+        </PressBtn>
+      </div>
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════
 // TODAY VIEW
 // ═══════════════════════════════════════════════════
@@ -1667,7 +1850,7 @@ function TodayView({ state, setState, T, showToast, scrollRef, articulos }) {
       contadoRef.current = true;
       setState(s => computeStreak({ ...s, read: [...new Set([...(s.read||[]), key])] }));
       if (!isRead) enviarInteraccion(key, "lectura");
-      showToast("¡Día sumado a tu racha! 🔥");
+      showToast("¡Día sumado a tu racha! 🔥", 3000);
     };
     const alCambiarVisibilidad = () => {
       desdeRef.current = document.visibilityState === "visible" ? Date.now() : null;
@@ -1772,7 +1955,7 @@ function TodayView({ state, setState, T, showToast, scrollRef, articulos }) {
         {/* Content sections */}
         <div style={{ borderRadius:20, border:`1px solid ${T.border}`, background:T.card, padding:"16px 16px 4px" }}>
           {art.context     && <SectionBlock icon={<Ic.Info/>}   title="Contexto técnico"  T={T}>{art.context}</SectionBlock>}
-          {art.detail      && <SectionBlock icon={<Ic.Layers/>} title="En detalle"        T={T}>{art.detail}</SectionBlock>}
+          {art.detail      && <SectionBlock icon={<Ic.Layers/>} title="En detalle"        T={T} figura={art.figura}>{art.detail}</SectionBlock>}
           {art.ai          && <SectionBlock icon={<Ic.Cpu/>}    title="Aplicación con IA" T={T}>{art.ai}</SectionBlock>}
           {art.history     && <SectionBlock icon={<Ic.ClockH/>} title="Historia técnica"  T={T}>{art.history}</SectionBlock>}
           {art.keyConcepts && <SectionBlock icon={<Ic.Star/>}   title="Conceptos clave"   T={T}>{art.keyConcepts}</SectionBlock>}
@@ -2934,6 +3117,17 @@ export default function App() {
     }
   }, [ready, state.tourVisto, state.encuestaEnviada]);
 
+  // Encuesta del piloto (23–29 nov): igual que la de cierre, una vez por apertura.
+  const [pilotoAbierta, setPilotoAbierta] = useState(false);
+  const pilotoMostrada = useRef(false);
+  useEffect(() => {
+    if (!ready || !state.tourVisto || pilotoMostrada.current) return;
+    if (enPiloto(hoyKey()) && !state.pilotoEnviada) {
+      pilotoMostrada.current = true;
+      setPilotoAbierta(true);
+    }
+  }, [ready, state.tourVisto, state.pilotoEnviada]);
+
   // Fondo de la página y barra del teléfono con el color del tema,
   // para que no quede un marco de otro color alrededor de la app.
   useEffect(() => {
@@ -2963,7 +3157,8 @@ export default function App() {
       case "archive": return <ArchiveView {...props}/>;
       case "profile": return <ProfileView {...props}/>;
       default: {
-        const aviso = <AvisoEtapa T={T} state={state} onAbrirEncuesta={() => setEncuestaAbierta(true)}/>;
+        const aviso = <AvisoEtapa T={T} state={state} onAbrirEncuesta={() => setEncuestaAbierta(true)}
+                        onAbrirPiloto={() => setPilotoAbierta(true)}/>;
         return (
           <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
             {aviso}
@@ -3028,6 +3223,16 @@ export default function App() {
             onEnviada={() => {
               setState(s => ({ ...s, encuestaEnviada:true }));
               setEncuestaAbierta(false);
+              toast.show("¡Gracias por responder!");
+            }}/>
+        )}
+
+        {/* Encuesta del piloto (23–29 nov) */}
+        {pilotoAbierta && !encuestaAbierta && (
+          <EncuestaPiloto T={T} onCerrar={() => setPilotoAbierta(false)}
+            onEnviada={() => {
+              setState(s => ({ ...s, pilotoEnviada:true }));
+              setPilotoAbierta(false);
               toast.show("¡Gracias por responder!");
             }}/>
         )}
