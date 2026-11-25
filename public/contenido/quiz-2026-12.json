@@ -1,0 +1,314 @@
+{
+ "preguntas": {
+  "2026-12-01": {
+   "pregunta": "Caminas 5 m en línea recta y horizontal llevando una caja de 10 kg a velocidad constante. ¿Cuánto trabajo hace el peso de la caja?",
+   "alternativas": [
+    "0 J",
+    "50 J",
+    "490 J"
+   ],
+   "correcta": 0,
+   "explicacion": "El peso es vertical y el desplazamiento, horizontal: θ = 90° y cos 90° = 0, así que W = 0 J."
+  },
+  "2026-12-02": {
+   "pregunta": "Un CTU tiene PV = 10 y ya contó 7 piezas. ¿Cuántas piezas más deben pasar por el sensor para que se active Q?",
+   "alternativas": [
+    "3",
+    "7",
+    "10"
+   ],
+   "correcta": 0,
+   "explicacion": "Q se activa cuando el conteo actual (CV) llega a PV: faltan 10 − 7 = 3 pulsos."
+  },
+  "2026-12-03": {
+   "pregunta": "Una fuente de 12 V alimenta una resistencia de 1 kΩ a través de un diodo de silicio que conduce. Con el modelo simplificado, ¿cuánta corriente circula?",
+   "alternativas": [
+    "12,7 mA",
+    "11,3 mA",
+    "12 mA"
+   ],
+   "correcta": 1,
+   "explicacion": "El diodo de silicio consume unos 0,7 V: I = (12 V − 0,7 V) / 1 kΩ = 11,3 mA. 12 mA sería el modelo ideal."
+  },
+  "2026-12-04": {
+   "pregunta": "Un equipo tiene la dirección 192.168.15.12/24 y otro, 192.168.16.20/24. ¿Están en la misma red?",
+   "alternativas": [
+    "Sí, porque las dos empiezan con 192.168",
+    "No, porque el tercer octeto es distinto",
+    "Sí, porque las dos usan /24"
+   ],
+   "correcta": 1,
+   "explicacion": "Con /24, la red son los tres primeros octetos: 192.168.15 y 192.168.16 son redes distintas, así que se comunican a través de un router."
+  },
+  "2026-12-05": {
+   "pregunta": "Si el semiciclo negativo de una onda es igual al positivo dado vuelta, ¿qué armónicas no puede tener?",
+   "alternativas": [
+    "Las impares: 3.ª, 5.ª y 7.ª",
+    "Las pares: 2.ª, 4.ª y 6.ª",
+    "Ninguna: tiene todas"
+   ],
+   "correcta": 1,
+   "explicacion": "Con simetría de media onda, f(t) = −f(t + T/2), todas las armónicas pares valen cero. Por eso la red tiene casi solo impares."
+  },
+  "2026-12-06": {
+   "pregunta": "Si se baja la temperatura de un modelo de lenguaje, ¿qué ocurre con sus respuestas?",
+   "alternativas": [
+    "Se vuelven más variadas e impredecibles",
+    "Se vuelven más predecibles: gana la palabra más probable",
+    "No cambian: la temperatura solo afecta la velocidad"
+   ],
+   "correcta": 1,
+   "explicacion": "Con temperatura baja, la probabilidad se concentra en los tokens con mayor puntaje, así que el modelo elige casi siempre la palabra más probable."
+  },
+  "2026-12-07": {
+   "pregunta": "El ensayo IK 08 deja caer una masa de 1,7 kg desde 295 mm. ¿Qué energía tiene aproximadamente el golpe?",
+   "alternativas": [
+    "0,5 J",
+    "5 J",
+    "50 J"
+   ],
+   "correcta": 1,
+   "explicacion": "E = m · g · h = 1,7 × 9,81 × 0,295 ≈ 4,9 J, es decir, unos 5 J. Es la energía que define el IK 08."
+  },
+  "2026-12-08": {
+   "pregunta": "Un motor entrega 1.500 W girando a 150 rad/s. ¿Cuál es su par?",
+   "alternativas": [
+    "0,1 N·m",
+    "10 N·m",
+    "225 kN·m"
+   ],
+   "correcta": 1,
+   "explicacion": "T = P / ω = 1.500 / 150 = 10 N·m."
+  },
+  "2026-12-09": {
+   "pregunta": "Una entrada de 0 a 10 V usa 27.648 cuentas a plena escala y mide un nivel de 0 a 4 m. Si la tarjeta entrega 6.912 cuentas, ¿qué nivel marca?",
+   "alternativas": [
+    "0,25 m",
+    "1 m",
+    "2 m"
+   ],
+   "correcta": 1,
+   "explicacion": "6.912 / 27.648 = 0,25, es decir, un cuarto del rango: 0,25 × 4 m = 1 m."
+  },
+  "2026-12-10": {
+   "pregunta": "Un rectificador de onda completa a 50 Hz alimenta una carga de 0,2 A. ¿Qué capacidad necesita el filtro para que el rizado sea de 1 V?",
+   "alternativas": [
+    "1.000 µF",
+    "4.000 µF",
+    "2.000 µF"
+   ],
+   "correcta": 2,
+   "explicacion": "C = I / (2 · f · V_r) = 0,2 / (2 · 50 · 1) = 0,002 F = 2.000 µF. Con media onda se necesitaría el doble: 4.000 µF."
+  },
+  "2026-12-11": {
+   "pregunta": "En una lista ordenada de 1.000 elementos, ¿cuántas comparaciones necesita como máximo la búsqueda binaria?",
+   "alternativas": [
+    "500",
+    "10",
+    "100"
+   ],
+   "correcta": 1,
+   "explicacion": "⌈log₂(1.001)⌉ = 10, porque 2¹⁰ = 1.024. La búsqueda lineal necesitaría en promedio unas 500."
+  },
+  "2026-12-12": {
+   "pregunta": "Un panel de 400 Wp recibe una irradiancia de 600 W/m², con la celda a 25 °C. ¿Qué potencia entrega?",
+   "alternativas": [
+    "400 W",
+    "240 W",
+    "160 W"
+   ],
+   "correcta": 1,
+   "explicacion": "La potencia es proporcional a la irradiancia: 400 W · 600 / 1.000 = 240 W."
+  },
+  "2026-12-13": {
+   "pregunta": "Según el estudio de Kalai y coautores, ¿por qué los modelos de lenguaje siguen inventando respuestas?",
+   "alternativas": [
+    "Porque las evaluaciones dan puntos por acertar y ninguno por decir «no lo sé»",
+    "Porque los modelos se entrenan con datos falsos a propósito",
+    "Porque los modelos buscan en internet y copian errores"
+   ],
+   "correcta": 0,
+   "explicacion": "Casi todas las evaluaciones premian acertar y no dan crédito a la abstención, así que adivinar conviene más que decir «no lo sé»."
+  },
+  "2026-12-14": {
+   "pregunta": "Para transmitir la misma potencia, una línea eleva su tensión 10 veces. ¿Cuánto bajan las pérdidas por calor en la línea?",
+   "alternativas": [
+    "10 veces",
+    "20 veces",
+    "100 veces"
+   ],
+   "correcta": 2,
+   "explicacion": "Al subir 10 veces la tensión, la corriente baja 10 veces. Como las pérdidas son I^{2} · R, bajan 10^{2} = 100 veces."
+  },
+  "2026-12-15": {
+   "pregunta": "Una viga simplemente apoyada tiene una carga al centro. Si la distancia entre apoyos se duplica y la carga no cambia, ¿cuánto aumenta su deflexión?",
+   "alternativas": [
+    "2 veces",
+    "4 veces",
+    "8 veces"
+   ],
+   "correcta": 2,
+   "explicacion": "La deflexión depende de L^{3}: si L se duplica, la deflexión crece 2^{3} = 8 veces."
+  },
+  "2026-12-16": {
+   "pregunta": "Un motor tiene una corriente de arranque directo de 60 A. ¿Cuánto será aproximadamente con partida estrella-triángulo?",
+   "alternativas": [
+    "20 A",
+    "35 A",
+    "60 A"
+   ],
+   "correcta": 0,
+   "explicacion": "En estrella-triángulo, la corriente de arranque baja a un tercio de la de partida directa: 60 / 3 = 20 A."
+  },
+  "2026-12-17": {
+   "pregunta": "Un 7805 recibe 9 V y entrega 5 V a una carga de 0,5 A. ¿Cuánta potencia convierte en calor?",
+   "alternativas": [
+    "2 W",
+    "2,5 W",
+    "4,5 W"
+   ],
+   "correcta": 0,
+   "explicacion": "P_D = (V_in − V_o) · I = (9 V − 5 V) · 0,5 A = 2 W. Los 2,5 W son lo que recibe la carga."
+  },
+  "2026-12-18": {
+   "pregunta": "Un cliente puede tener varios préstamos y un préstamo puede tener varios clientes. ¿Cómo se representa en una base de datos relacional?",
+   "alternativas": [
+    "Con una clave foránea de cliente en la tabla préstamo",
+    "Repitiendo los datos del cliente en cada préstamo",
+    "Con una tabla intermedia que guarda las dos claves"
+   ],
+   "correcta": 2,
+   "explicacion": "Es una relación muchos a muchos: se crea una tabla intermedia con la clave de cliente y la de préstamo."
+  },
+  "2026-12-19": {
+   "pregunta": "El viento en un parque eólico sube de 6 m/s a 12 m/s. ¿Cuántas veces aumenta la potencia disponible?",
+   "alternativas": [
+    "2 veces",
+    "4 veces",
+    "8 veces"
+   ],
+   "correcta": 2,
+   "explicacion": "La potencia crece con el cubo de la velocidad: (12 / 6)³ = 2³ = 8."
+  },
+  "2026-12-20": {
+   "pregunta": "¿Cuál de estas instrucciones a una IA tiene más probabilidades de dar una buena respuesta?",
+   "alternativas": [
+    "«Resume esto.»",
+    "«Resume este informe en 5 viñetas para mi jefe, que no es técnico; si falta un dato, dilo.»",
+    "«Resume esto bien y sin errores, por favor.»"
+   ],
+   "correcta": 1,
+   "explicacion": "La segunda da contexto (quién lee), propósito, formato (5 viñetas) y permiso para decir que falta un dato."
+  },
+  "2026-12-21": {
+   "pregunta": "Un THHN de 4,0 mm² (35 A en la tabla) va con otros 4 conductores activos en un ambiente de 38 °C (f_{t} = 0,91). ¿Cuál es su capacidad corregida?",
+   "alternativas": [
+    "≈ 22 A",
+    "≈ 25 A",
+    "≈ 35 A"
+   ],
+   "correcta": 1,
+   "explicacion": "Son 5 conductores activos, así que f_{n} = 0,8. I_{c} = 35 × 0,8 × 0,91 ≈ 25 A."
+  },
+  "2026-12-22": {
+   "pregunta": "Un eje hueco tiene 4 cm de diámetro exterior y 2 cm de diámetro interior. Comparado con un eje macizo de 4 cm del mismo material y largo, ¿qué parte de su peso tiene?",
+   "alternativas": [
+    "50 %",
+    "75 %",
+    "94 %"
+   ],
+   "correcta": 1,
+   "explicacion": "El peso es proporcional al área de la sección: (4^{2} − 2^{2}) / 4^{2} = 12 / 16 = 75 %."
+  },
+  "2026-12-23": {
+   "pregunta": "Un motor de 2 pares de polos funciona con un variador a 40 Hz. ¿Cuál es su velocidad de sincronismo?",
+   "alternativas": [
+    "800 rpm",
+    "1.200 rpm",
+    "1.500 rpm"
+   ],
+   "correcta": 1,
+   "explicacion": "n_{s} = 60 · f / p = 60 × 40 / 2 = 1.200 rpm."
+  },
+  "2026-12-24": {
+   "pregunta": "En un comparador sin realimentación, la entrada v₊ está en 3,2 V y la v₋ en 3,0 V. ¿Qué hace la salida?",
+   "alternativas": [
+    "Entrega 0,2 V, la diferencia entre las entradas",
+    "Va a −V_sat, cerca de la alimentación negativa",
+    "Va a +V_sat, cerca de la alimentación positiva"
+   ],
+   "correcta": 2,
+   "explicacion": "Como v₊ es mayor que v₋ y la ganancia es enorme, la salida se va a su límite positivo: +V_sat."
+  },
+  "2026-12-25": {
+   "pregunta": "Según la guía NIST de 2025, ¿qué hace más segura una contraseña que es el único factor de acceso?",
+   "alternativas": [
+    "Tener al menos 15 caracteres",
+    "Cambiarla obligatoriamente cada 90 días",
+    "Incluir mayúscula, número y símbolo"
+   ],
+   "correcta": 0,
+   "explicacion": "La guía pide largo: mínimo 15 caracteres. Ya no recomienda exigir símbolos ni cambiar la contraseña cada cierto tiempo, salvo que se haya filtrado."
+  },
+  "2026-12-26": {
+   "pregunta": "Una casa con paneles inyecta a la red la energía que no consume. ¿A qué precio se valoriza esa energía?",
+   "alternativas": [
+    "Al mismo precio que paga por su consumo",
+    "Al precio de nudo, menor que el de consumo",
+    "No se valoriza: queda para la distribuidora"
+   ],
+   "correcta": 1,
+   "explicacion": "Con netbilling, la energía inyectada se valoriza al precio de nudo, menor que la tarifa de consumo. Por eso conviene usar la energía en el momento en que se genera."
+  },
+  "2026-12-27": {
+   "pregunta": "¿Qué diferencia al mantenimiento predictivo del preventivo?",
+   "alternativas": [
+    "El predictivo repara el equipo después de que falla",
+    "El predictivo interviene según la condición medida del equipo",
+    "El predictivo cambia piezas cada cierto número de horas"
+   ],
+   "correcta": 1,
+   "explicacion": "El preventivo interviene por calendario; el predictivo mide la condición real del equipo con sensores e interviene cuando aparecen señales de degradación."
+  },
+  "2026-12-28": {
+   "pregunta": "Una vivienda tiene un empalme monofásico de 25 A. ¿Qué potencia nominal le corresponde según el RIC N° 01?",
+   "alternativas": [
+    "2,5 kW",
+    "5 kW",
+    "25 kW"
+   ],
+   "correcta": 1,
+   "explicacion": "En la tabla del anexo 1.3, la protección de 25 A corresponde a 5 kW nominales. Es también el empalme mínimo que el RIC N° 10 exige para una vivienda."
+  },
+  "2026-12-29": {
+   "pregunta": "Un piñón de 12 dientes mueve un engrane de 48 dientes. Si el motor entrega 2 N·m, ¿cuánto par sale del engrane, sin pérdidas?",
+   "alternativas": [
+    "0,5 N·m",
+    "8 N·m",
+    "24 N·m"
+   ],
+   "correcta": 1,
+   "explicacion": "La relación es 48 / 12 = 4: la velocidad baja 4 veces y el par sube 4 veces, 2 × 4 = 8 N·m."
+  },
+  "2026-12-30": {
+   "pregunta": "Según las buenas prácticas de diseño de pantallas, ¿cómo deben mostrarse las alarmas?",
+   "alternativas": [
+    "Solo con color rojo, sin texto, para que sean rápidas de ver",
+    "Con colores intensos reservados para ellas y acompañadas de texto o forma",
+    "Con colores intensos en toda la pantalla, para que nada pase desapercibido"
+   ],
+   "correcta": 1,
+   "explicacion": "Los colores intensos se reservan para las alarmas, y nunca el color debe ser la única señal: se acompaña de texto o forma, por ejemplo para personas que distinguen mal los colores."
+  },
+  "2026-12-31": {
+   "pregunta": "Un circuito CMOS baja su alimentación de 5 V a 2,5 V, con la misma capacidad y frecuencia. ¿Qué pasa con su consumo dinámico?",
+   "alternativas": [
+    "Baja a la cuarta parte",
+    "Baja a la mitad",
+    "No cambia"
+   ],
+   "correcta": 0,
+   "explicacion": "En P = C · V_DD² · f la tensión está al cuadrado: con la mitad de tensión, la potencia queda en (1/2)² = 1/4."
+  }
+ }
+}
