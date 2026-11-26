@@ -1226,7 +1226,7 @@ const PRUEBA = {
   fin:          "2026-10-18",  // último día del aviso
   encuesta:     "2026-10-19",  // encuesta de cierre desde este día
   encuestaHasta:"2026-10-31",  // último día de la encuesta
-  cierreHasta:  "2026-11-30",  // último día de la tarjeta de la prueba extendida (seguir inscrito, invitar)
+  cierreHasta:  "2026-12-20",  // último día de la tarjeta de la prueba extendida (seguir inscrito, invitar)
   piloto:       "2026-11-23",  // encuesta del piloto desde este día (v0.7.1)
   pilotoHasta:  "2026-11-29",  // último día de la encuesta del piloto
 };
