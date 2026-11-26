@@ -222,15 +222,24 @@ const mesDe = (fechaKey) => fechaKey.slice(0, 7);
 
 // Un mes sin archivo publicado no tiene artículos. La muestra de ejemplo solo
 // se usa al desarrollar en el computador, nunca en la app publicada.
+// Si la descarga falla (sin conexión o señal débil), reintenta sola dos veces
+// (a los 1,5 s y a los 4 s) y, si sigue fallando, avisa con fallo:true para que
+// la app muestre «No se pudo cargar» en vez de «Sin artículo» (v0.7.2).
+const ESPERAS_REINTENTO = [1500, 4000];
+const esperar = ms => new Promise(r => setTimeout(r, ms));
 async function cargarMes(mes) {
   const vacio = { articulos:{}, errores:[] };
-  try {
-    const r = await fetch(`/contenido/${mes}.json`, { cache:"no-cache" });
-    if (r.status === 404) return vacio;
-    if (!r.ok) throw new Error(r.status);
-    return normalizarMes(await r.json());
-  } catch {
-    return import.meta.env.DEV ? normalizarMes({ articulos: CONTENIDO_DEMO }) : vacio;
+  for (let intento = 0; ; intento++) {
+    try {
+      const r = await fetch(`/contenido/${mes}.json`, { cache:"no-cache" });
+      if (r.status === 404) return vacio;
+      if (!r.ok) throw new Error(r.status);
+      return normalizarMes(await r.json());
+    } catch {
+      if (import.meta.env.DEV) return normalizarMes({ articulos: CONTENIDO_DEMO });
+      if (intento >= ESPERAS_REINTENTO.length) return { ...vacio, fallo:true };
+      await esperar(ESPERAS_REINTENTO[intento]);
+    }
   }
 }
 
@@ -1801,7 +1810,7 @@ function EncuestaPiloto({ T, onCerrar, onEnviada }) {
 // ═══════════════════════════════════════════════════
 // TODAY VIEW
 // ═══════════════════════════════════════════════════
-function TodayView({ state, setState, T, showToast, scrollRef, articulos }) {
+function TodayView({ state, setState, T, showToast, scrollRef, articulos, estadoMeses = {}, onReintentar }) {
   const key      = state.selectedKey;
   const art      = articulos[key];
   const saved    = state.saved.includes(key);
@@ -1875,6 +1884,29 @@ function TodayView({ state, setState, T, showToast, scrollRef, articulos }) {
     } catch {}
   }
 
+  // Sin artículo: distingue entre «cargando», «no se pudo cargar» (falla de
+  // conexión, con botón Reintentar) y «no hay artículo» (fecha sin publicar).
+  const estadoMes = estadoMeses[mesDe(key)];
+  if (!art && estadoMes === "fallo") return (
+    <div role="alert" style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:40, gap:12 }}>
+      <span style={{ fontSize:48 }}>📶</span>
+      <p style={{ color:T.text, fontSize:14, fontWeight:700, textAlign:"center", margin:0 }}>No se pudo cargar el artículo.</p>
+      <p style={{ color:T.muted, fontSize:13, textAlign:"center", margin:0 }}>
+        Revisa tu conexión. Se cargará solo cuando vuelva internet.
+      </p>
+      <PressBtn onClick={() => onReintentar?.(mesDe(key))} label="Reintentar la carga del artículo"
+        style={{ background:T.accent, color:"#fff", border:"none", borderRadius:12, padding:"10px 22px",
+          fontFamily:FONT, fontSize:13.5, fontWeight:700, cursor:"pointer", marginTop:4 }}>
+        Reintentar
+      </PressBtn>
+    </div>
+  );
+  if (!art && estadoMes === "cargando") return (
+    <div role="status" style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:40, gap:12 }}>
+      <span style={{ fontSize:48 }}>⏳</span>
+      <p style={{ color:T.muted, fontSize:13, textAlign:"center", margin:0 }}>Cargando el artículo…</p>
+    </div>
+  );
   if (!art) return (
     <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:40, gap:12 }}>
       <span style={{ fontSize:48 }}>📅</span>
@@ -3045,15 +3077,37 @@ export default function App() {
 
   // Carga de meses. Se pide cada mes una sola vez y nunca un mes futuro:
   // lo que aún no se publica para el estudiante no llega al teléfono desde la app.
+  // Si un mes no se pudo descargar, queda marcado como «fallo» y se vuelve a
+  // pedir con el botón Reintentar, al volver la conexión o al volver a la app.
   const mesesCargados = useRef(new Set());
+  const [estadoMeses, setEstadoMeses] = useState({});
   const verMes = useCallback(mes => {
     if (mes > mesDe(hoyKey()) || mesesCargados.current.has(mes)) return;
     mesesCargados.current.add(mes);
-    cargarMes(mes).then(({ articulos:arts, errores }) => {
+    setEstadoMeses(prev => ({ ...prev, [mes]:"cargando" }));
+    cargarMes(mes).then(({ articulos:arts, errores, fallo }) => {
+      if (fallo) mesesCargados.current.delete(mes);
+      setEstadoMeses(prev => ({ ...prev, [mes]: fallo ? "fallo" : "ok" }));
       setArticulos(prev => ({ ...prev, ...arts }));
       if (errores.length) setAvisos(prev => [...prev, ...errores]);
     }).finally(() => { if (mes === mesDe(hoyKey())) setMesHoyListo(true); });
   }, []);
+
+  // Vuelve a pedir los meses que fallaron.
+  const estadoMesesRef = useRef(estadoMeses);
+  estadoMesesRef.current = estadoMeses;
+  const reintentarFallidos = useCallback(() => {
+    Object.entries(estadoMesesRef.current).forEach(([mes, e]) => { if (e === "fallo") verMes(mes); });
+  }, [verMes]);
+  useEffect(() => {
+    const alVolverVisible = () => { if (document.visibilityState === "visible") reintentarFallidos(); };
+    window.addEventListener("online", reintentarFallidos);
+    document.addEventListener("visibilitychange", alVolverVisible);
+    return () => {
+      window.removeEventListener("online", reintentarFallidos);
+      document.removeEventListener("visibilitychange", alVolverVisible);
+    };
+  }, [reintentarFallidos]);
 
   // El mes de la fecha elegida.
   const mesActual = mesDe(state.selectedKey || hoyKey());
@@ -3163,7 +3217,7 @@ export default function App() {
           <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
             {aviso}
             <TarjetaSondeo T={T} state={state} setState={setState}/>
-            <TodayView {...props} scrollRef={scrollRef}/>
+            <TodayView {...props} scrollRef={scrollRef} estadoMeses={estadoMeses} onReintentar={verMes}/>
           </div>
         );
       }
